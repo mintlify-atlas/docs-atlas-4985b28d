@@ -1,0 +1,140 @@
+{
+  "projectType": "general",
+  "projectName": "Sn0w",
+  "projectDescription": "A powerful Minecraft 1.21.x hacked client focused on crystal PvP and anarchy servers.",
+  "theme": "aspen",
+  "primaryColor": "#67C6E3",
+  "lightColor": "#A3E4F7",
+  "darkColor": "#2B5F7C",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart",
+              "faq"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/overview",
+              "configuration/keybinds",
+              "configuration/config-files"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Modules",
+        "groups": [
+          {
+            "group": "Combat",
+            "pages": [
+              "modules/combat/overview",
+              "modules/combat/autocrystal",
+              "modules/combat/killaura",
+              "modules/combat/surround",
+              "modules/combat/autototem",
+              "modules/combat/autoanchor",
+              "modules/combat/criticals"
+            ]
+          },
+          {
+            "group": "Movement",
+            "pages": [
+              "modules/movement/overview",
+              "modules/movement/speed",
+              "modules/movement/flight",
+              "modules/movement/elytrafly",
+              "modules/movement/holesnap",
+              "modules/movement/noslow"
+            ]
+          },
+          {
+            "group": "Render",
+            "pages": [
+              "modules/render/overview",
+              "modules/render/esp",
+              "modules/render/nametags",
+              "modules/render/holeesp",
+              "modules/render/chams",
+              "modules/render/freecam"
+            ]
+          },
+          {
+            "group": "Misc",
+            "pages": [
+              "modules/misc/overview",
+              "modules/misc/autotool",
+              "modules/misc/autoreplenish",
+              "modules/misc/fakeplayer",
+              "modules/misc/announcer"
+            ]
+          },
+          {
+            "group": "Player",
+            "pages": [
+              "modules/player/overview",
+              "modules/player/speedmine",
+              "modules/player/scaffold",
+              "modules/player/fastplace"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/commands/overview",
+              "reference/commands/bind",
+              "reference/commands/config",
+              "reference/commands/friend",
+              "reference/commands/waypoint"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "reference/advanced/event-system",
+              "reference/advanced/module-api",
+              "reference/advanced/extending"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Crystal PvP optimized combat modules",
+    "Original bypasses for major servers (2b2t, Grim, etc.)",
+    "Advanced movement with Holesnap and phase walking",
+    "Custom shader and visual effects",
+    "Extensive configuration system",
+    "Command-based control interface",
+    "Baritone integration support",
+    "Event-driven module architecture"
+  ],
+  "publicApiSurface": [
+    "Module System (Combat, Movement, Render, Misc, Player, Ghost)",
+    "AutoCrystal - Crystal PvP automation",
+    "KillAura - Entity targeting system",
+    "Surround - Automatic obsidian placement",
+    "Holesnap - Advanced movement to holes",
+    "Speed - Movement speed enhancement",
+    "ESP - Entity and block highlighting",
+    "Nametags - Custom player labels",
+    "Command System - In-game commands",
+    "Config System - YAML-based configuration",
+    "Event Bus - Custom event handling",
+    "HUD System - Overlay components"
+  ]
+}
