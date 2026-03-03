@@ -1,0 +1,582 @@
+---
+title: Config File Format
+description: Detailed reference for Sn0w's YAML configuration file structure
+---
+
+## File Format
+
+Sn0w uses YAML (YAML Ain't Markup Language) for all configuration files. YAML is a human-readable data serialization format that uses indentation to represent structure.
+
+## File Locations
+
+### Config Directory
+```
+<Minecraft Directory>/Sn0w/
+```
+
+### File Types
+
+| Directory | Purpose | When Created |
+|-----------|---------|-------------|
+| `Sn0w/features/` | Auto-saved individual modules | On first launch |
+| `Sn0w/configs/` | User-saved config presets | On first `.config save` |
+
+## YAML Configuration
+
+### Parser Settings
+
+Sn0w uses SnakeYAML with the following settings:
+
+```java:SavableManager.java
+DumperOptions options = new DumperOptions();
+options.setIndent(4);                    // 4-space indentation
+options.setPrettyFlow(true);             // Pretty printing enabled
+options.setDefaultFlowStyle(BLOCK);      // Block style (not inline)
+```
+
+### Basic Structure
+
+```yaml
+ModuleName:
+    settingName: value
+    nestedSetting:
+        key: value
+```
+
+- **4-space indentation** (not tabs)
+- **Colon separator** between keys and values
+- **Case-sensitive** keys
+- **No quotes** needed for most strings
+
+## Module Configuration Format
+
+Each module in a config file follows this structure:
+
+```yaml
+ModuleName:
+    enabled: boolean
+    bind: integer or MOUSE_X
+    chatNotify: boolean
+    visible: boolean
+    name: "Display Name"
+    # Module-specific settings below
+    setting1: value
+    setting2: value
+```
+
+### Base Module Settings
+
+Every module includes these standard fields:
+
+```yaml
+ExampleModule:
+    enabled: false          # Module on/off state
+    bind: -1               # Keybind (-1 = unbound)
+    chatNotify: true       # Show toggle notifications
+    visible: true          # Show in module list
+    name: ExampleModule    # Display name
+```
+
+## Value Types
+
+### Boolean Values
+
+```yaml
+enabled: true
+disable: false
+visible: true
+```
+
+### Numeric Values
+
+#### Integers
+```yaml
+bind: 78
+delay: 100
+range: 5
+```
+
+#### Floating Point
+```yaml
+speed: 0.5
+maxDamage: 7.125
+minDamage: 4.875
+factor: 1.9
+```
+
+### String Values
+
+```yaml
+name: AutoCrystal
+mode: Strict
+text: "Text with spaces"
+```
+
+<Note>
+Strings with spaces, special characters, or colons should be quoted.
+</Note>
+
+### Keybind Values
+
+#### Keyboard Key
+```yaml
+bind: 78  # N key (GLFW code)
+```
+
+#### Mouse Button
+```yaml
+bind: MOUSE_4  # Side button
+```
+
+#### Unbound
+```yaml
+bind: -1  # No keybind
+```
+
+### Color Values
+
+Colors are stored as nested RGBA objects:
+
+```yaml
+colorName:
+    red: 255      # 0-255
+    green: 67     # 0-255
+    blue: 127     # 0-255
+    alpha: 255    # 0-255 (transparency)
+    sync: true    # Sync with HudColors module
+```
+
+#### Color Examples
+
+```yaml
+fillColor:
+    red: 255
+    green: 67
+    blue: 127
+    alpha: 38
+    sync: true
+
+outlineColor:
+    red: 255
+    green: 0
+    blue: 0
+    alpha: 255
+    sync: false
+```
+
+### Enum/Mode Values
+
+```yaml
+mode: Strict        # String matching enum value
+timing: Soft
+rotationsType: NCP
+autoSwitch: Normal
+```
+
+## Example Configuration
+
+From `basicconfig.yml`:
+
+```yaml
+AutoTrap:
+    rotate: true
+    visible: true
+    chatNotify: true
+    blocks: 1.0
+    eChest: false
+    range: 5.0
+    targetRange: 5.0
+    enabled: false
+    mode: City
+    delay: 52.083333333333336
+    bind: 78
+    disable: false
+    name: AutoTrap
+    strict: false
+
+Scaffold:
+    rotate: true
+    chatNotify: true
+    thickness: 1.1
+    downwards: true
+    line:
+        red: 255
+        green: 67
+        blue: 127
+        alpha: 255
+        sync: true
+    ExpandMode: 'Off'
+    barColor: Custom
+    enabled: false
+    mode: Silent
+    bind: 82
+    blockCounter: Bar
+    visualize: true
+    limit: true
+    rightColor:
+        red: 0
+        green: 255
+        blue: 0
+        alpha: 255
+        sync: false
+    leftColor:
+        red: 255
+        green: 0
+        blue: 255
+        alpha: 255
+        sync: false
+    event: Post
+    safeWalk: None
+    render: true
+    placeDelay: 63.0
+    towerMode: Normal
+    visible: true
+    fadeTime: 200
+    fill:
+        red: 255
+        green: 67
+        blue: 127
+        alpha: 25
+        sync: true
+    swing: true
+    barText: false
+    name: Scaffold
+    grim: false
+```
+
+## Serialization Process
+
+### Save Process
+
+When saving, the `Feature.save()` method is called:
+
+```java:Feature.java
+@Override
+public Map<String, Object> save() {
+    Map<String, Object> toSave = new HashMap<>();
+    toSave.put("enabled", enabled);
+    
+    for (Value<?> value : getValues()) {
+        if (value.getValue() instanceof Sn0wColor) {
+            // Serialize color as nested map
+            Value<Sn0wColor> val = (Value<Sn0wColor>) value;
+            Map<String, Object> color = new HashMap<>();
+            color.put("red", val.getValue().getColor().getRed());
+            color.put("green", val.getValue().getColor().getGreen());
+            color.put("blue", val.getValue().getColor().getBlue());
+            color.put("alpha", val.getValue().getColor().getAlpha());
+            color.put("sync", val.getValue().isSyncing());
+            toSave.put(value.getTag(), color);
+        } else {
+            // Serialize primitive/string value
+            toSave.put(value.getTag(), value.getValue());
+        }
+    }
+    return toSave;
+}
+```
+
+### Load Process
+
+When loading, the `Feature.load()` method is called:
+
+```java:Feature.java
+@Override
+public void load(Map<String, Object> objects) {
+    if (objects == null) return;
+    
+    Object e = objects.get("enabled");
+    if (e != null) {
+        setEnabled((boolean) e);
+    }
+    
+    for (Value value : getValues()) {
+        Object o = objects.get(value.getTag());
+        if (o != null) {
+            try {
+                if (value.getValue() instanceof Sn0wColor) {
+                    // Deserialize color from nested map
+                    Map<String, Object> map = (Map<String, Object>) o;
+                    Sn0wColor sn0wColor = new Sn0wColor(
+                        new Color(
+                            (int) map.get("red"),
+                            (int) map.get("green"),
+                            (int) map.get("blue"),
+                            (int) map.get("alpha")
+                        ),
+                        (boolean) map.get("sync")
+                    );
+                    value.setValue(sn0wColor);
+                } else {
+                    // Load primitive/string value
+                    value.setValue(o);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+}
+```
+
+## File Operations
+
+### Creating a Config File
+
+```java:SavableManager.java
+public void saveModuleConfig(String name) throws IOException {
+    File dir = new File(MAIN_FOLDER.getAbsolutePath() + File.separator + "configs");
+    if (!dir.exists()) dir.mkdirs();
+    
+    File file = new File(dir, name + ".yml");
+    if (!file.exists()) file.createNewFile();
+    
+    Map<String, Object> yamlData = new HashMap<>();
+    for (Feature feature : FeatureManager.INSTANCE.getFeatures()) {
+        Map<String, Object> featureMap = new HashMap<>();
+        featureMap.putAll(feature.save());
+        yamlData.put(feature.getName(), featureMap);
+    }
+    
+    yaml.dump(yamlData, new FileWriter(file));
+}
+```
+
+### Loading a Config File
+
+```java:SavableManager.java
+public void loadModuleConfig(String name) throws Exception {
+    File file = new File(MAIN_FOLDER + "/configs/" + name + ".yml");
+    if (!file.exists()) 
+        throw new Exception("Could not find config " + name + ".yml!");
+    
+    InputStream inputStream = new FileInputStream(file);
+    Map<String, Object> map = yaml.load(inputStream);
+    
+    for (Feature feature : FeatureManager.INSTANCE.getFeatures()) {
+        try {
+            Map<String, Object> featureMap = 
+                (Map<String, Object>) map.get(feature.getName());
+            feature.loadModule(featureMap);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+## Soft Loading
+
+Soft loading excludes certain categories and settings:
+
+```java:SavableManager.java
+public void softLoadConfig(String name) throws Exception {
+    // ... file loading code ...
+    
+    for (Feature feature : FeatureManager.INSTANCE.getFeatures()) {
+        // Skip Render and HUD modules
+        if (feature.getCategory().equals(Feature.Category.Render) 
+            || feature.getCategory().equals(Feature.Category.Hud))
+            continue;
+        
+        // Skip Client modules except AntiCheat
+        if (feature.getCategory().equals(Feature.Category.Client) 
+            && feature != AntiCheat.INSTANCE)
+            continue;
+        
+        // Load with softLoadModule (excludes binds and colors)
+        feature.softLoadModule(featureMap);
+    }
+}
+```
+
+### Soft Load Module
+
+```java:Feature.java
+public void softLoadModule(Map<String, Object> objects) {
+    setEnabledA(objects.get("enabled") != null 
+        ? (boolean) objects.get("enabled") 
+        : isEnabled());
+    
+    for (Value value : getValues()) {
+        Object o = objects.get(value.getTag());
+        
+        // Skip binds
+        if (Objects.equals(value.getTag(), "bind")) continue;
+        
+        if (o != null) {
+            try {
+                // Skip colors
+                if (!(value.getValue() instanceof Sn0wColor)) {
+                    value.setValue(o);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+}
+```
+
+## Manual Editing
+
+### Editing Config Files
+
+1. **Close Minecraft** (important!)
+2. Navigate to `Minecraft/Sn0w/configs/`
+3. Open `.yml` file in text editor
+4. Make changes following YAML syntax
+5. Save file
+6. Launch Minecraft
+7. Run `.config load <name>`
+
+### Common Edits
+
+#### Change Keybind
+```yaml
+# Before
+bind: 78
+
+# After (keyboard)
+bind: 82
+
+# After (mouse)
+bind: MOUSE_4
+```
+
+#### Enable/Disable Module
+```yaml
+# Before
+enabled: false
+
+# After
+enabled: true
+```
+
+#### Adjust Settings
+```yaml
+# Before
+range: 5.0
+delay: 100
+
+# After
+range: 6.5
+delay: 50
+```
+
+#### Change Colors
+```yaml
+# Before
+fillColor:
+    red: 255
+    green: 67
+    blue: 127
+    alpha: 38
+    sync: true
+
+# After (red to blue)
+fillColor:
+    red: 67
+    green: 127
+    blue: 255
+    alpha: 38
+    sync: true
+```
+
+## YAML Syntax Rules
+
+### Indentation
+- **Use 4 spaces** (not tabs)
+- Consistent indentation required
+- Nested values must be indented
+
+<Warning>
+Incorrect indentation will cause parsing errors. Always use spaces, never tabs.
+</Warning>
+
+### Quoting
+- Most strings don't need quotes
+- Use quotes for:
+  - Strings with spaces
+  - Strings with colons
+  - Strings starting with special characters
+
+```yaml
+name: MyModule          # OK
+name: "My Module"       # OK (has space)
+mode: Fast              # OK
+text: "Value: 100"      # Required (has colon)
+```
+
+### Comments
+```yaml
+# This is a comment
+enabled: true  # Inline comment
+```
+
+### Lists (Rare in Sn0w)
+```yaml
+listName:
+  - item1
+  - item2
+  - item3
+```
+
+## Troubleshooting
+
+### Parsing Errors
+
+**Error**: "Failed to load config"
+
+**Common causes**:
+- Mixed tabs and spaces
+- Incorrect indentation
+- Missing colons
+- Unquoted strings with special characters
+
+**Solution**: Validate YAML syntax using an online YAML validator
+
+### Value Type Mismatch
+
+**Error**: Config loads but settings are wrong
+
+**Causes**:
+- String where number expected: `delay: "100"` → `delay: 100`
+- Number where boolean expected: `enabled: 1` → `enabled: true`
+
+### Missing Settings
+
+If a setting is missing from the config:
+- The module will use its default value
+- No error is thrown
+- Setting will be added on next save
+
+### Corrupted Config
+
+If a config becomes corrupted:
+```bash
+# Delete the problematic config
+.config delete broken_config
+
+# Create a fresh config
+.config save new_config
+```
+
+## Best Practices
+
+### Before Editing
+1. **Backup**: Copy config before editing
+2. **Close client**: Always edit with Minecraft closed
+3. **Text editor**: Use a proper text editor (not Notepad on Windows)
+
+### While Editing
+1. **Indentation**: Use 4 spaces consistently
+2. **Case sensitive**: Match exact key names
+3. **Type matching**: Keep value types correct (number vs string vs boolean)
+
+### After Editing
+1. **Validate**: Check YAML syntax before loading
+2. **Test**: Load in a test environment if possible
+3. **Save backup**: Keep working config backed up
+
+## See Also
+
+- [Configuration Overview](/configuration/overview) - Config system overview
+- [Keybinds](/configuration/keybinds) - Keybind system details
+- [Commands](/reference/commands/overview) - Config commands reference

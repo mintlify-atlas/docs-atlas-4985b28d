@@ -1,0 +1,525 @@
+---
+title: Scaffold
+description: Automatically places blocks beneath you for bridging and building
+icon: cubes
+---
+
+## Overview
+
+Scaffold automatically places blocks under your feet as you walk, allowing you to bridge across gaps, build quickly, and create structures without manually placing each block. It's one of the most essential modules for building and PvP.
+
+## Features
+
+- Automatic block placement while walking
+- Tower mode for vertical building
+- Multiple SafeWalk modes to prevent falling
+- Expand mode for bridging in all directions
+- Downwards mode for placing below you
+- Block counter with visual display
+- Rotation options for anti-cheat bypass
+- Helps place multiple blocks ahead
+
+## Settings
+
+### Core Settings
+
+<ParamField path="Event" type="enum" default="Post">
+  When to place blocks during the tick
+  
+  - **Post**: After player movement (more stable)
+  - **Pre**: Before player movement (faster)
+</ParamField>
+
+<ParamField path="Mode" type="enum" default="Silent">
+  How to switch to block slot
+  
+  - **Silent**: Switches invisibly (server-side only)
+  - **Swap**: Visually changes hotbar slot
+</ParamField>
+
+<ParamField path="Tower" type="enum" default="None">
+  Vertical building mode
+  
+  - **None**: Disabled
+  - **Normal**: Tower up while standing still and jumping
+  - **Move**: Tower up even while moving
+</ParamField>
+
+<ParamField path="Limit" type="boolean" default="false">
+  Limits tower height to bypass anti-cheat (applies brief downward motion every 1.5s)
+</ParamField>
+
+<ParamField path="Grim" type="boolean" default="false">
+  GrimAC compatibility mode - looks down at 90 degrees when no blocks can be placed
+</ParamField>
+
+<ParamField path="Rotate" type="boolean" default="false">
+  Rotates your head towards the block being placed
+</ParamField>
+
+<ParamField path="Swing" type="boolean" default="false">
+  Shows arm swing animation when placing blocks
+</ParamField>
+
+<ParamField path="Downwards" type="boolean" default="false">
+  When sneaking, places blocks 2 layers below instead of 1
+</ParamField>
+
+### SafeWalk Settings
+
+<ParamField path="SafeWalk" type="enum" default="None">
+  Prevents walking off edges
+  
+  - **None**: Disabled (you can fall)
+  - **Soft**: Adjusts movement to stay on blocks
+  - **Strong**: Forces sneak at edges
+</ParamField>
+
+### Expand Settings
+
+<ParamField path="Expand" type="enum" default="Off">
+  Places blocks in your movement direction
+  
+  - **Off**: Only places directly below
+  - **On**: Always expands in movement direction
+  - **Dynamic**: Only expands while jumping
+</ParamField>
+
+### Timing
+
+<ParamField path="Place Delay" type="number" default="0">
+  Delay between block placements in milliseconds (0-1000ms)
+  
+  Higher values are safer for anti-cheat but slower
+</ParamField>
+
+### Visual Settings
+
+<ParamField path="Block Counter" type="enum" default="None">
+  Shows remaining block count
+  
+  - **None**: Hidden
+  - **Text**: Shows count as text
+  - **Bar**: Shows colored progress bar
+</ParamField>
+
+<ParamField path="Render" type="boolean" default="true">
+  Renders placed block positions with fade effect
+</ParamField>
+
+## How It Works
+
+<Steps>
+  <Step title="Block Detection">
+    Scaffold continuously checks if the block below you is air or replaceable
+  </Step>
+  
+  <Step title="Placement Target">
+    Finds the best position and direction to place a block
+    - Checks directly below
+    - Uses "helping blocks" if needed (places support blocks first)
+    - Expands in movement direction if enabled
+  </Step>
+  
+  <Step title="Rotation (Optional)">
+    If Rotate is enabled, turns your head toward the placement position
+  </Step>
+  
+  <Step title="Place Block">
+    Switches to block slot (Silent or Swap) and places the block
+  </Step>
+  
+  <Step title="SafeWalk (Optional)">
+    Adjusts your movement to prevent walking off edges
+  </Step>
+</Steps>
+
+## Tower Mode
+
+Tower mode allows you to build straight up:
+
+<Tabs>
+  <Tab title="Normal Tower">
+    ### How to Use
+    1. Enable Tower: Normal
+    2. Stand still (no movement keys)
+    3. Hold jump (spacebar)
+    4. Scaffold automatically places blocks below and boosts you up
+    
+    **Mechanics:**
+    ```java
+    // Located at: player/Scaffold.java:274-302
+    if (mc.options.jumpKey.isPressed() && !mc.world.getBlockState(under).isReplaceable()) {
+        if (!PlayerUtils.isMoving() || tower.getValue().equals("Move")) {
+            if (mc.player.getVelocity().y != 0.42F) {
+                PlayerUtils.setMotionY(0.42f);  // Jump boost
+            }
+            
+            // Bypasses tower check on some servers
+            if (towerTimer.isPassed(1500) && limit.getValue()) {
+                PlayerUtils.setMotionY(-0.28f);  // Brief downward motion
+                towerTimer.resetDelay();
+            }
+            
+            PlayerUtils.setMotionXZ(mc.player.getVelocity().x * 0.9, mc.player.getVelocity().z * 0.9);
+        }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Move Tower">
+    ### Advanced Tower
+    
+    Move tower allows building up while moving:
+    1. Set Tower to "Move"
+    2. Hold jump while walking
+    3. Towers up even while moving forward
+    
+    **Best For:**
+    - Quick vertical escape
+    - Building pillars while running
+    - Emergency height advantage
+    
+    <Warning>
+    Move tower is more detectable by anti-cheat systems
+    </Warning>
+  </Tab>
+</Tabs>
+
+## SafeWalk Modes
+
+<AccordionGroup>
+  <Accordion title="Soft SafeWalk">
+    Adjusts your movement vector to prevent walking off edges:
+    
+    ```java
+    Vec2f safeMove = PlayerUtils.safeWalk(event.getX(), event.getZ());
+    event.setX(safeMove.x);
+    event.setZ(safeMove.y);
+    ```
+    
+    **Pros:**
+    - Natural movement
+    - No visible sneak animation
+    - Works while sprinting
+    
+    **Cons:**
+    - May not catch all edge cases
+  </Accordion>
+  
+  <Accordion title="Strong SafeWalk">
+    Forces sneak at edges:
+    
+    ```java
+    isSneaking = PlayerUtils.canSneak(safeMove);
+    mc.options.sneakKey.setPressed(isSneaking);
+    ```
+    
+    **Pros:**
+    - Guaranteed edge safety
+    - Prevents any fall-offs
+    - More reliable
+    
+    **Cons:**
+    - Visible sneak animation
+    - Slower movement speed
+  </Accordion>
+</AccordionGroup>
+
+## Expand Mode
+
+Expand allows bridging in all directions:
+
+<Tabs>
+  <Tab title="Directional Logic">
+    ```java
+    // Located at: player/Scaffold.java:603-660
+    // Forward
+    if (mc.options.forwardKey.isPressed() && !mc.options.backKey.isPressed()) {
+        BlockPos forwardPos = underPos.offset(mc.player.getHorizontalFacing());
+        if (mc.world.getBlockState(forwardPos).isReplaceable()) {
+            return forwardPos;
+        }
+    }
+    
+    // Backward
+    else if (mc.options.backKey.isPressed() && !mc.options.forwardKey.isPressed()) {
+        BlockPos backPos = underPos.offset(mc.player.getHorizontalFacing().getOpposite());
+        // ...
+    }
+    
+    // Right/Left strafe
+    // ...
+    ```
+  </Tab>
+  
+  <Tab title="Dynamic Expand">
+    Only expands while jumping:
+    
+    ```java
+    if (expand.getValue().equals("Off") || 
+        (expand.getValue().equals("Dynamic") && !mc.options.jumpKey.isPressed()))
+        return null;
+    ```
+    
+    **Use Case:**
+    - Normal walking: Places only directly below
+    - While jumping: Places in movement direction
+    - More controlled bridging
+  </Tab>
+</Tabs>
+
+## Downwards Mode
+
+Places blocks 2 layers below when sneaking:
+
+```java
+// Located at: player/Scaffold.java:607-612
+if (!canSneak()) {
+    underPos = underPos.down();  // One extra layer down
+}
+```
+
+**Usage:**
+1. Enable Downwards
+2. Hold sneak while walking
+3. Places blocks 2 layers below your feet
+4. Useful for creating lower platforms
+
+## Block Counter Display
+
+<Tabs>
+  <Tab title="Text Counter">
+    Simple text display showing block count:
+    - Displays number of blocks remaining
+    - Shows item icon with count
+    - Color-coded: Red (low) → Yellow → Green (full)
+  </Tab>
+  
+  <Tab title="Bar Counter">
+    Visual progress bar:
+    - 80 pixel wide bar
+    - Gradient color based on block count
+    - Optional item icon with count
+    - Customizable colors
+    
+    **Bar Color Modes:**
+    - **Scissor**: Auto color (red to green based on count)
+    - **Custom**: Use your own gradient colors
+  </Tab>
+</Tabs>
+
+## Block Selection
+
+Scaffold intelligently selects valid blocks:
+
+```java
+// Located at: player/Scaffold.java:460-478
+private boolean isItemValid(Item item) {
+    if (item instanceof BlockItem itemBlock) {
+        if (!blacklistedBlocks.contains(itemBlock.getBlock())) {
+            BlockState baseState = itemBlock.getBlock().getDefaultState();
+            if (!baseState.isReplaceable()) {
+                VoxelShape voxelShape = baseState.getCollisionShape(mc.world, outOfBounds);
+                return voxelShape.equals(VoxelShapes.fullCube());
+            }
+        }
+    }
+    return false;
+}
+```
+
+### Blacklisted Blocks
+
+Scaffold won't use these blocks:
+- All shulker boxes (prevent accidental placement)
+- Falling blocks (gravel, sand, anvils)
+- Stairs (not full cubes)
+- Pistons and redstone blocks
+- Cobwebs, hoppers, chorus flowers
+
+## Configuration Presets
+
+<CodeGroup>
+```text Vanilla Bridging
+Event: Post
+Mode: Silent
+Tower: None
+Rotate: false
+Swing: false
+SafeWalk: Soft
+Expand: Dynamic
+Place Delay: 0
+
+→ Fast bridging
+→ Expand only when jumping
+→ No rotation (looks natural)
+```
+
+```text Anti-Cheat Bypass
+Event: Post
+Mode: Silent
+Tower: Normal
+Limit: true
+Grim: true
+Rotate: true
+Swing: true
+SafeWalk: Strong
+Expand: Off
+Place Delay: 50
+
+→ Maximum compatibility
+→ Slower but safer
+→ Rotation for strict servers
+```
+
+```text Speed Scaffold
+Event: Pre
+Mode: Swap
+Tower: Move
+Limit: false
+Rotate: false
+Swing: false
+SafeWalk: None
+Expand: On
+Place Delay: 0
+
+→ Maximum speed
+→ Less anti-cheat safe
+→ For vanilla or lenient servers
+```
+
+```text PvP Scaffold
+Event: Post
+Mode: Silent
+Tower: Normal
+Limit: true
+Rotate: true
+Swing: true
+SafeWalk: Soft
+Expand: On
+Place Delay: 25
+Block Counter: Bar
+
+→ Combat-focused
+→ Tower for height advantage
+→ Visual block counter
+```
+</CodeGroup>
+
+## Advanced Techniques
+
+<AccordionGroup>
+  <Accordion title="Helping Blocks">
+    When direct placement is impossible, Scaffold places "helping blocks":
+    
+    ```java
+    // Located at: player/Scaffold.java:516-557
+    public Pair.BlockPair getHelping(BlockPos pos) {
+        // First pass: Check immediate neighbors
+        for (Direction facing : Direction.values()) {
+            BlockPos p = pos.offset(facing);
+            Direction f = BlockUtils.getFacing(p);
+            if (f != null) return new Pair.BlockPair(p, f);
+        }
+        
+        // Second pass: Check neighbors of neighbors
+        for (Direction facing : Direction.values()) {
+            BlockPos p = pos.offset(facing);
+            if (mc.world.getBlockState(p).isReplaceable()) {
+                for (Direction direction1 : Direction.values()) {
+                    BlockPos neighbor1 = p.offset(direction1);
+                    if (!mc.world.getBlockState(neighbor1).isReplaceable()) {
+                        Direction f = BlockUtils.getFacing(neighbor1);
+                        if (f != null) return new Pair.BlockPair(neighbor1, f);
+                    }
+                }
+            }
+        }
+    }
+    ```
+    
+    This allows bridging over large gaps by placing intermediate support blocks.
+  </Accordion>
+  
+  <Accordion title="Jump Timing">
+    For fastest bridging:
+    1. Enable Expand: Dynamic
+    2. Sprint + Jump continuously
+    3. Scaffold places ahead while jumping
+    4. Walk normally while on ground
+    
+    This creates a rhythm: Jump (expand) → Walk (normal) → Jump (expand)
+  </Accordion>
+  
+  <Accordion title="Tower + Scaffold">
+    Combine tower with forward movement:
+    1. Set Tower to Move
+    2. Set Expand to On
+    3. Hold W + Space
+    4. Creates diagonal tower
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Block Management" icon="boxes-stacked">
+    Use AutoReplenish to automatically refill blocks in your hotbar
+  </Card>
+  
+  <Card title="SafeWalk" icon="shield">
+    Always use at least Soft SafeWalk to prevent accidental falls
+  </Card>
+  
+  <Card title="Place Delay" icon="clock">
+    Increase delay on strict anti-cheat servers (50-100ms)
+  </Card>
+  
+  <Card title="Practice" icon="graduation-cap">
+    Practice tower timing in a safe area before PvP
+  </Card>
+</CardGroup>
+
+<Warning>
+  Tower mode (especially Move) and fast bridging may be detected by advanced anti-cheat systems. Adjust settings based on your server.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Blocks Not Placing">
+    - Check if you have valid blocks in hotbar (see blacklist)
+    - Ensure block count > 0
+    - Try increasing Place Delay
+    - Disable other modules that may interfere
+  </Accordion>
+  
+  <Accordion title="Tower Not Working">
+    - Must stand still for Normal tower
+    - Must be on solid ground (not replaceable)
+    - Check if Limit is causing issues
+    - Disable other movement modules
+  </Accordion>
+  
+  <Accordion title="SafeWalk Not Working">
+    - Try switching from Soft to Strong
+    - Ensure you're moving (SafeWalk only active when moving)
+    - Check if Downwards mode is interfering
+  </Accordion>
+  
+  <Accordion title="Getting Kicked by Anti-Cheat">
+    - Enable Rotate
+    - Increase Place Delay to 50-100ms
+    - Enable Limit for tower
+    - Use Grim mode for GrimAC
+    - Switch Mode from Swap to Silent
+  </Accordion>
+</AccordionGroup>
+
+## Related Modules
+
+- **AutoReplenish**: Automatically refills blocks
+- **FastPlace**: Places blocks faster
+- **NoSlow**: Move at full speed while placing
+- **Sprint**: Auto sprint while scaffolding

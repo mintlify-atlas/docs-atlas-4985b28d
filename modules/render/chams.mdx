@@ -1,0 +1,227 @@
+---
+title: Chams
+description: See entities through walls with customizable visual effects
+---
+
+Chams renders entities through walls with customizable colors and effects, allowing you to track players and crystals even when obstructed.
+
+## Features
+
+### Entity Types
+
+**Players**
+- Render other players through walls
+- **Self** - Show your own player model (requires third-person or Freecam)
+
+**Crystals**  
+- Highlight end crystals through walls
+- Essential for crystal PvP awareness
+
+**Hand**
+- Apply chams effect to your hand/held items
+- Creates a glowing hand effect
+
+## Visual Settings
+
+### Colors
+
+**Fill Color**
+- Inner color of the entity model
+- Default: Blue with 25 alpha (transparent)
+- Lower alpha = more transparent
+
+**Frame Color**  
+- Outline/wireframe color
+- Default: White with 255 alpha (solid)
+- Set alpha to 0 to disable wireframe
+
+<Info>
+You can disable fill or frame independently by setting their alpha to 0. This allows wireframe-only or solid-only rendering.
+</Info>
+
+### Effects
+
+**Shiny**
+- Changes blend function for a shiny/glowing effect
+- Uses `GL_ONE_MINUS_CONSTANT_ALPHA` blend mode
+- Creates a brighter, more vibrant appearance
+
+```java
+if (shiny.getValue())
+  GL11.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+else  
+  GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+```
+
+Source: `Chams.java:135-175`
+
+**Walls**
+- When disabled, respects depth testing (entities behind walls are dimmer)
+- When enabled, renders at full brightness through all blocks
+
+```java
+if (!walls.getValue())
+  RenderSystem.enableDepthTest();
+```
+
+Source: `Chams.java:131-132`
+
+## Rendering Modes
+
+### Standard Mode (Cancel = false)
+
+Chams renders as an additional overlay on top of normal entity rendering:
+- Normal entity renders first
+- Chams overlay renders after
+- Both are visible
+
+### Cancel Mode (Cancel = true)  
+
+Replaces normal entity rendering completely:
+- Vanilla rendering is cancelled
+- Only chams rendering is shown
+- Applies model animations manually
+- Renders feature layers (armor, items, etc.)
+
+```java
+if (cancel.getValue()) {
+  event.setCancelled(true);
+  // Manual rendering of model, animations, and features
+}
+```
+
+Source: `Chams.java:196-289`
+
+<Info>
+Cancel mode provides better performance and cleaner visuals by avoiding double-rendering. However, standard mode preserves more vanilla visual features.
+</Info>
+
+## Configuration
+
+| Setting | Type | Range | Default | Description |
+|---------|------|-------|---------|-------------|
+| Players | Boolean | - | false | Render players through walls |
+| Self | Boolean | - | false | Render yourself (requires Players) |
+| Crystals | Boolean | - | false | Render end crystals |
+| Hand | Boolean | - | false | Apply chams to your hand |
+| Fill | Color | - | Blue (25) | Inner model color |
+| Frame | Color | - | White (255) | Outline color |
+| Shiny | Boolean | - | false | Shiny/glowing effect |
+| Walls | Boolean | - | false | Full brightness through walls |
+| Cancel | Boolean | - | false | Replace normal rendering |
+| Range | Number | 0-300 | 1 | Render distance |
+
+## Shader Integration
+
+Chams uses the client's shader system for rendering:
+
+- Custom model rendering via `ChamsModelRenderer`
+- Shader-based color application
+- Depth buffer manipulation for through-wall rendering
+
+Source: `Chams.java:294-298`
+
+## Player Model Rendering
+
+For players, chams applies special transformations:
+
+```java
+if (entity instanceof PlayerEntity) {
+  ChamsModelRenderer.setupPlayerTransforms(
+    (AbstractClientPlayerEntity) entity,
+    matrixStack,
+    animationProgress,
+    bodyYaw,
+    tickDelta
+  );
+}
+```
+
+Source: `Chams.java:252-257`
+
+This ensures:
+- Proper body rotation
+- Smooth animation interpolation  
+- Correct pose (standing, sneaking, swimming, etc.)
+- Feature rendering (armor, elytra, items)
+
+## Hand Rendering
+
+When `Hand` is enabled:
+
+```java
+ChamsModelRenderer.renderHand(
+  matrices,
+  tickDelta, 
+  wireColor.getColor(),
+  fillColor.getColor(),
+  1.0f,
+  wireColor.getAlpha() != 0,  // render wireframe?
+  fillColor.getAlpha() != 0,   // render fill?
+  false
+);
+```
+
+Source: `Chams.java:313-314`
+
+## Integration
+
+Chams integrates with several systems:
+
+**Freecam**  
+- Shows self chams when in freecam mode
+- `Freecam.INSTANCE.isEnabled()`
+
+Source: `Chams.java:347`
+
+**AntiCheat**
+- Respects visualize rotations when rendering
+- Adjusts head yaw/pitch for anti-cheat visualization
+
+Source: `Chams.java:207-237`
+
+**RotationManager**
+- Skips rendering when `FROM_INV` flag is set
+- Prevents conflicts with inventory-based rotation spoofing
+
+Source: `Chams.java:185`
+
+## Visual Tips
+
+<Info>
+**Recommended Configurations:**
+
+**Subtle ESP:**
+- Fill: 0 alpha (disabled)
+- Frame: White, 150 alpha
+- Walls: false
+- Creates subtle outline visible through walls
+
+**Full Glow:**  
+- Fill: Bright color, 100 alpha
+- Frame: White, 255 alpha
+- Shiny: true
+- Walls: true
+- Maximum visibility and impact
+
+**Hand Glow:**
+- Fill: Cyan, 50 alpha
+- Frame: 0 alpha (disabled)  
+- Shiny: true
+- Clean glowing hand effect
+</Info>
+
+## Performance Notes
+
+- Chams renders during `RenderWorldEvent` with `MANAGER_FIRST` priority
+- Range limiting prevents rendering distant entities
+- View distance culling: only renders entities within loaded chunks
+
+```java
+double d = (mc.options.getViewDistance().getValue() + 1) * 16;
+if (player.distanceTo(entity) > range || x > d || z > d) {
+  continue; // Skip rendering
+}
+```
+
+Source: `Chams.java:141-147`

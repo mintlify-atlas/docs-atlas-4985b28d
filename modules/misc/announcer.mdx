@@ -1,0 +1,399 @@
+---
+title: Announcer
+description: Automatically announces your actions in chat
+icon: megaphone
+---
+
+## Overview
+
+Announcer automatically sends messages when you perform various actions like breaking blocks, placing blocks, eating food, walking distances, or when players join/leave the server. It's useful for flexing your client usage or just having fun on servers.
+
+## Features
+
+- Announces blocks broken, placed, eaten, and distance traveled
+- Welcomes/farewells players joining and leaving
+- Time-of-day messages (morning, noon, night, etc.)
+- Multiple message templates with randomization
+- Three output modes: Self, Chat, and Whisper
+- Configurable delay between actions
+
+## Settings
+
+<ParamField path="Mode" type="enum" default="Self">
+  Where to send announcement messages
+  
+  - **Self**: Only you see messages (client-side)
+  - **Chat**: Sends messages to public chat
+  - **Whisper**: Whispers to nearest player
+</ParamField>
+
+<ParamField path="Break" type="boolean" default="true">
+  Announce blocks broken
+</ParamField>
+
+<ParamField path="Place" type="boolean" default="true">
+  Announce blocks placed
+</ParamField>
+
+<ParamField path="Eat" type="boolean" default="true">
+  Announce food eaten
+</ParamField>
+
+<ParamField path="Walk" type="boolean" default="true">
+  Announce distance traveled
+</ParamField>
+
+<ParamField path="Joins" type="boolean" default="true">
+  Announce player joins/leaves
+</ParamField>
+
+<ParamField path="World Time" type="boolean" default="true">
+  Announce time of day changes
+</ParamField>
+
+<ParamField path="Delay" type="number" default="5">
+  Delay multiplier for announcements (1-15)
+  
+  Higher values = less frequent messages
+</ParamField>
+
+## Message Types
+
+<Tabs>
+  <Tab title="Block Breaking">
+    ### Break Messages
+    
+    Announces after breaking multiple blocks:
+    
+    ```text
+    "I just mined {amount} {name} thanks to Sn0w!"
+    "Я только что добыл {amount} {name} блока благодаря Sn0w!"
+    ```
+    
+    **Triggers:**
+    - After breaking random amount (1-10) blocks
+    - With delay of `300 * delay` ticks
+    - Resets counter after announcement
+    
+    **Example:**
+    ```
+    I just mined 7 Stone thanks to Sn0w!
+    ```
+  </Tab>
+  
+  <Tab title="Block Placing">
+    ### Place Messages
+    
+    Announces after placing multiple blocks:
+    
+    ```text
+    "I just built a castle made out of {amount} {name} thanks to Sn0w!"
+    "Я только что построил замок из {amount} {name} благодаря Sn0w!"
+    ```
+    
+    **Triggers:**
+    - After placing random amount (1-10) blocks
+    - With delay of `150 * delay` ticks
+    - Only counts when using BlockItem
+    
+    **Example:**
+    ```
+    I just built a castle made out of 42 Cobblestone thanks to Sn0w!
+    ```
+  </Tab>
+  
+  <Tab title="Eating">
+    ### Eat Messages
+    
+    Announces after eating food:
+    
+    ```text
+    "I just ate {amount} {name} thanks to Sn0w!"
+    "Я только что съел {amount} {name} благодаря Sn0w!"
+    ```
+    
+    **Triggers:**
+    - After eating random amount (1-10) food items
+    - With delay of `300 * delay` ticks
+    - Only counts food with FoodComponent
+    
+    **Example:**
+    ```
+    I just ate 3 Golden Apple thanks to Sn0w!
+    ```
+  </Tab>
+  
+  <Tab title="Walking">
+    ### Walk Messages
+    
+    Announces distance traveled:
+    
+    ```text
+    "I just magically teleported {blocks} blocks thanks to Sn0w!"
+    "Я просто волшебным образом телепортировал {blocks} блоков благодаря Sn0w!"
+    ```
+    
+    **Triggers:**
+    - Every `5000 * delay` milliseconds
+    - Calculates 3D distance traveled
+    - Ignores distances < 1 block or > 5000 blocks
+    
+    **Example:**
+    ```
+    I just magically teleported 142.56 blocks thanks to Sn0w!
+    ```
+  </Tab>
+  
+  <Tab title="Player Joins">
+    ### Join/Leave Messages
+    
+    Welcomes or says goodbye to players:
+    
+    **Join Messages:**
+    ```text
+    "Welcome to %serverip% %name%!"
+    "Welcome to hell, %name%."
+    "Hey, %name%"
+    "Greetings, %name%"
+    ```
+    
+    **Leave Messages:**
+    ```text
+    "Goodbye %name%!"
+    "Cya %name%"
+    "Farewell, %name%"
+    ```
+    
+    **Example:**
+    ```
+    Welcome to 2b2t.org Steve!
+    Goodbye Steve!
+    ```
+  </Tab>
+  
+  <Tab title="World Time">
+    ### Time Messages
+    
+    Announces at specific world times:
+    
+    | Time | Tick | Messages |
+    |------|------|----------|
+    | Morning | 0 | "I survived another night!", "Good Morning!" |
+    | Noon | 4000 | "Let's go tanning!", "Enjoy the sun outside!" |
+    | Afternoon | 6000 | "Good afternoon!" |
+    | Bedtime | 13000 | "BEDTIME NOW!!!", "You may now sleep!" |
+    | Night | 14000 | "Let's get comfy!", "Netflix and chill!" |
+    | Sunset | 16000 | Time transition messages |
+    | Midnight | 18000 | "It's so dark outside...", "Its scary out there!" |
+    | Daylight | 23000 | "Good bye, zombies!" |
+    
+    **Cooldown:** 100 ticks between time messages
+  </Tab>
+</Tabs>
+
+## Output Modes
+
+<AccordionGroup>
+  <Accordion title="Self Mode">
+    Messages only appear in your client chat:
+    - Colored in aqua
+    - No packets sent to server
+    - Safe for all servers
+    - Good for testing
+    
+    ```java
+    ChatUtils.sendMessage(Formatting.AQUA + message);
+    ```
+  </Accordion>
+  
+  <Accordion title="Chat Mode">
+    Messages sent to public chat:
+    - Visible to all players
+    - Queued with configurable delay
+    - Waits `delay * 1000` ms between messages
+    - May trigger spam filters
+    
+    ```java
+    ChatUtils.sendChatMessage(messages.poll());
+    ```
+  </Accordion>
+  
+  <Accordion title="Whisper Mode">
+    Messages whispered to nearest player:
+    - Finds target within 100 blocks
+    - Sends as `/w [player] [message]`
+    - Private messages
+    - Requires whisper permission
+    
+    ```java
+    LivingEntity entity = TargetUtils.getTarget(100);
+    ChatUtils.sendChatMessage("/w " + entity.getName().getString() + " " + messages.poll());
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Technical Details
+
+### Message Queue System
+
+To avoid spam detection, messages are queued:
+
+```java
+// Located at: misc/Announcer.java:94-310
+public Queue<String> messages = new LinkedList<>();
+
+// Messages are added to queue
+messages.add(message);
+
+// Sent with delay
+if (timer.isPassed(delay.getValue().intValue() * 1000L) && !messages.isEmpty()) {
+    ChatUtils.sendChatMessage(messages.poll());
+    timer.resetDelay();
+}
+```
+
+### Distance Calculation
+
+3D Euclidean distance:
+
+```java
+// Located at: misc/Announcer.java:270-294
+if (lastPositionUpdate + (5000L * delay.getValue().intValue()) < System.currentTimeMillis()) {
+    double d0 = lastPositionX - mc.player.getX();
+    double d2 = lastPositionY - mc.player.getY();
+    double d3 = lastPositionZ - mc.player.getZ();
+    
+    speed = Math.sqrt(d0 * d0 + d2 * d2 + d3 * d3);
+    
+    if (!(speed <= 1) && !(speed > 5000)) {
+        String walkAmount = new DecimalFormat("0.00").format(speed);
+        sendMessage(walkMessages[random.nextInt(walkMessages.length)].replace("{blocks}", walkAmount));
+    }
+}
+```
+
+### Random Thresholds
+
+Uses random thresholds to seem more natural:
+
+```java
+int randomNum = ThreadLocalRandom.current().nextInt(1, 10 + 1);
+if (blocksBroken > randomNum) {
+    // Announce
+    blocksBroken = 0;
+}
+```
+
+## Configuration Examples
+
+<CodeGroup>
+```text Silent Announcer
+Mode: Self
+Break: true
+Place: true
+Eat: true
+Walk: true
+Joins: false
+World Time: false
+Delay: 5
+
+→ All messages visible only to you
+→ No spam in public chat
+→ Good for testing
+```
+
+```text Flex Mode
+Mode: Chat
+Break: true
+Place: true
+Eat: false
+Walk: true
+Joins: true
+World Time: false
+Delay: 10
+
+→ Public announcements
+→ Higher delay to avoid spam
+→ Flex your client usage
+```
+
+```text Stealth Whisper
+Mode: Whisper
+Break: false
+Place: false
+Eat: false
+Walk: false
+Joins: true
+World Time: false
+Delay: 3
+
+→ Only greet/farewell players
+→ Whispered privately
+→ Friendly interactions
+```
+
+```text Minimal
+Mode: Self
+Break: false
+Place: false
+Eat: false
+Walk: false
+Joins: false
+World Time: true
+Delay: 1
+
+→ Only time announcements
+→ Client-side only
+→ Time awareness
+```
+</CodeGroup>
+
+## Message Variables
+
+Messages support dynamic variables:
+
+| Variable | Replacement | Example |
+|----------|-------------|----------|
+| `{amount}` | Number of items | 42 |
+| `{name}` | Item/block name | Stone |
+| `{blocks}` | Distance traveled | 123.45 |
+| `%name%` | Player name | Steve |
+| `%serverip%` | Server address | 2b2t.org |
+| `Sn0w` | Client name | Sn0w (or custom) |
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start with Self Mode" icon="user">
+    Test your configuration in Self mode before enabling public chat
+  </Card>
+  
+  <Card title="Higher Delay on Servers" icon="clock">
+    Use delay 8-15 on servers with spam filters
+  </Card>
+  
+  <Card title="Disable in Combat" icon="sword">
+    Turn off during PvP to avoid distraction
+  </Card>
+  
+  <Card title="Custom Messages" icon="pen">
+    Edit the source to add your own custom messages
+  </Card>
+</CardGroup>
+
+<Warning>
+  Using Chat mode with low delay on strict servers may result in kick or mute for spam.
+</Warning>
+
+## Known Limitations
+
+- Walk distance resets on module disable
+- Time messages require being in-game for 200 ticks
+- Whisper mode requires a player within 100 blocks
+- Some servers may block whisper commands
+
+## Related Modules
+
+- **ChatSuffix**: Adds suffix to all chat messages
+- **AutoEZ**: Automatically sends messages after kills
+- **Spammer**: Advanced chat spamming tool

@@ -1,0 +1,178 @@
+---
+title: HoleESP
+description: Highlights safe holes that protect from crystal damage
+---
+
+HoleESP visualizes safe holes (bedrock and obsidian) on the ground that provide protection from end crystal explosions, a critical feature for crystal PvP.
+
+## Hole Types
+
+The module distinguishes three types of safe holes:
+
+### Bedrock Holes
+Single-block holes completely surrounded by bedrock. These are the safest as they cannot be broken.
+
+**Default Colors:**
+- Fill: Green (100 alpha)
+- Line: White (255 alpha)
+
+### Obsidian Holes  
+Single-block holes surrounded by obsidian. Safe but can be broken with mining.
+
+**Default Colors:**
+- Fill: Cyan (100 alpha)
+- Line: White (255 alpha)
+
+### Double Holes
+Two-block holes that provide safe positioning. Enabled with the `Doubles` setting.
+
+**Default Colors:**
+- Fill: Red (100 alpha)  
+- Line: White (255 alpha)
+
+## Glow Modes
+
+Control how holes are highlighted:
+
+### None
+Solid colors without gradients:
+```java
+RenderUtil.renderBox(RenderType.FILL, holeBB, fillColor, fillColor);
+RenderUtil.renderBox(RenderType.LINES, holeBB, outlineColor, outlineColor);
+```
+
+### Fade
+Gradient effect from bottom to top:
+- Uses secondary color values (Fill2, Line2)
+- Interpolates between primary and secondary colors
+- Creates a vertical gradient effect
+
+Source: `HoleEsp.java:231-243`
+
+<Info>
+Fade mode requires configuring both primary colors (bottom) and secondary colors (top) for each hole type.
+</Info>
+
+## Animation Modes
+
+### None
+Static rendering without distance-based effects.
+
+### Fade
+Holes fade in as you approach:
+```java
+// Calculate distance-based opacity
+double rangeAnimation = MathHelper.clamp(
+  ((range + 1) - eyePos.distanceTo(holeBB.getCenter())) / range,
+  0.0, 1.0
+);
+fillColor = ColorUtil.newAlpha(fillColor, alpha * rangeAnimation);
+```
+
+Source: `HoleEsp.java:192-201`
+
+### Height  
+Hole height scales with distance:
+```java
+renderHeight = heightValue * rangeAnimation;
+```
+
+Source: `HoleEsp.java:203-206`
+
+## Void Holes
+
+Highlights missing bedrock at the bottom of the world:
+
+- **Void Safe Fill/Line** - Color when block is present
+- **Void Fill/Line** - Color when block is missing (actual void)
+- **Void Height** - Render height for void indicators (0.1-2.0)
+
+```java
+// Scans bottom of world for missing bedrock
+for (int x = -range; x < range; x++) {
+  for (int z = -range; z < range; z++) {
+    BlockPos pos = new BlockPos(playerX + x, world.getBottomY(), playerZ + z);
+    if (world.getBlockState(pos).getBlock() != Blocks.BEDROCK) {
+      voidPositions.add(pos);
+    }
+  }
+}
+```
+
+Source: `HoleEsp.java:280-294`
+
+## Performance
+
+HoleESP uses concurrent processing for optimal performance:
+
+```java
+ExecutorService service = Executors.newCachedThreadPool();
+
+// Background hole scanning
+service.submit(() -> {
+  holes = HoleUtils.getHoles(range, playerPos, doubles);
+  if (voidHoles.getValue()) {
+    voidPositions = getVoidHoles();
+  }
+});
+```
+
+Source: `HoleEsp.java:142-164`
+
+<Info>
+Hole detection runs asynchronously to prevent frame drops. The module uses volatile lists for thread-safe rendering.
+</Info>
+
+## Configuration
+
+### Basic Settings
+
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Range | 1-30 | 5 | Scan radius in blocks |
+| Height | 0-2 | 1 | Render height of holes |
+| Doubles | - | true | Show double-wide holes |
+
+### Color Settings (6 per hole type)
+
+**Standard Colors:**
+- Bedrock Fill/Line
+- Obby Fill/Line  
+- Double Fill/Line
+
+**Fade Colors (when Glow Mode = Fade):**
+- Bedrock Fill2/Line2
+- Obby Fill2/Line2
+- Double Fill2/Line2
+
+## Visual Tips
+
+<Info>
+**Recommended Settings:**
+- Use **Height animation** for better depth perception
+- Keep **Fill alpha** around 100 for visibility without obstruction
+- Enable **Fade glow** for aesthetic gradient effects
+- Use **Void Holes** when playing on servers with incomplete bedrock
+</Info>
+
+## Technical Details
+
+The module integrates with `HoleUtils` for hole detection:
+
+```java
+// Returns list of Hole objects with properties:
+class Hole {
+  BlockPos pos1;      // First position
+  BlockPos pos2;      // Second position (for doubles)
+  boolean bedrock;    // True if bedrock hole
+  boolean doubleHole; // True if 2-block hole
+}
+```
+
+Source: `HoleEsp.java:176-246`
+
+Rendering respects hole boundaries:
+- Single holes: `new Box(pos)` (1x1x1)
+- Double holes: `new Box(pos1.x, pos1.y, pos1.z, pos2.x+1, pos2.y+1, pos2.z+1)`
+
+Source: `HoleEsp.java:178`

@@ -1,0 +1,243 @@
+---
+title: KillAura
+description: Automatic entity targeting and attack module
+---
+
+KillAura automatically attacks nearby entities within range. It provides smart targeting, rotation management, and weapon switching for efficient combat.
+
+## Overview
+
+KillAura detects nearby entities and automatically attacks them based on your configuration. The module supports multiple entity types, rotation modes, and attack timing strategies.
+
+## Features
+
+- **Smart targeting** - Distance or FOV-based sorting
+- **Entity filtering** - Target players, mobs, animals, or vehicles
+- **Auto weapon switching** - Automatically equips best weapon
+- **Rotation support** - Multiple rotation modes for different scenarios
+- **Attack timing** - Cooldown-based or custom delay
+- **Visual feedback** - ESP highlights for current target
+
+## Configuration
+
+### Range Settings
+
+<ParamField path="range" type="number" default="6">
+  Maximum attack range in blocks (3-6)
+</ParamField>
+
+<ParamField path="wallsRange" type="number" default="3">
+  Maximum range when attacking through walls (3-6 blocks)
+</ParamField>
+
+### Targeting
+
+<ParamField path="sorting" type="select" default="Distance">
+  Target sorting method
+  - **Distance** - Closest entity first
+  - **FOV** - Entity closest to crosshair
+</ParamField>
+
+<ParamField path="players" type="boolean" default="true">
+  Target player entities
+</ParamField>
+
+<ParamField path="mobs" type="boolean" default="false">
+  Target hostile mobs (zombies, skeletons, etc.)
+</ParamField>
+
+<ParamField path="animals" type="boolean" default="false">
+  Target passive animals (pigs, cows, etc.)
+</ParamField>
+
+<ParamField path="vehicles" type="boolean" default="false">
+  Target vehicles (minecarts, boats, etc.)
+</ParamField>
+
+### Attack Settings
+
+<ParamField path="delay" type="select" default="Cooldown">
+  Attack timing mode
+  - **Cooldown** - Use vanilla attack cooldown
+  - **Delay** - Custom attack delay
+</ParamField>
+
+<ParamField path="attackSpeed" type="number" default="20">
+  Attacks per second when using Delay mode (0.1-20)
+</ParamField>
+
+<ParamField path="tpsSync" type="select" default="None">
+  Sync attacks with server TPS (Cooldown mode only)
+  - **None** - No TPS synchronization
+  - **Average** - Sync with average TPS
+  - **Last** - Sync with last tick rate
+</ParamField>
+
+### Weapon Management
+
+<ParamField path="autoSwitch" type="boolean" default="false">
+  Automatically switch to best weapon in hotbar
+</ParamField>
+
+<ParamField path="eatPause" type="boolean" default="false">
+  Pause auto-switching while eating (requires Auto Switch)
+</ParamField>
+
+<ParamField path="onlyWeapon" type="boolean" default="true">
+  Only attack when holding a weapon (sword, axe, mace, trident)
+</ParamField>
+
+### Rotation
+
+<ParamField path="rotate" type="boolean" default="true">
+  Rotate head towards target
+</ParamField>
+
+<ParamField path="yawStep" type="boolean" default="true">
+  Limit rotation speed for more legit appearance (requires Rotate)
+</ParamField>
+
+<ParamField path="persist" type="boolean" default="true">
+  Keep rotation even when not attacking (requires Rotate)
+</ParamField>
+
+<ParamField path="rotateType" type="select" default="Auto">
+  Target point for rotations (requires Rotate)
+  - **Auto** - Intelligently choose best point
+  - **Head** - Target entity's head/eyes
+  - **Torso** - Target entity's center
+  - **Feet** - Target entity's feet
+</ParamField>
+
+### Multi-Tasking
+
+<ParamField path="multiTask" type="select" default="None">
+  Behavior when using other items
+  - **None** - Always attack regardless of item usage
+  - **Soft** - Pause if using main hand item
+  - **Strong** - Pause if using any item
+</ParamField>
+
+### Visual
+
+<ParamField path="esp" type="boolean" default="false">
+  Enable ESP highlighting for current target
+</ParamField>
+
+<ParamField path="fill" type="color" default="rgba(255, 62, 62, 25)">
+  Fill color for target ESP box
+</ParamField>
+
+<ParamField path="line" type="color" default="rgba(255, 62, 62, 255)">
+  Outline color for target ESP box
+</ParamField>
+
+## Usage
+
+### Basic Setup
+
+1. Enable KillAura from the Combat category
+2. Configure your preferred range (6 blocks recommended)
+3. Select which entity types to target
+4. Enable rotation for better accuracy
+5. Set attack timing based on your needs
+
+### Attack Modes
+
+**Cooldown Mode** (Recommended)
+- Respects vanilla attack cooldown
+- Most legit appearance
+- Works with TPS sync for server lag
+
+**Delay Mode**
+- Custom attacks per second
+- Can attack faster than vanilla
+- May trigger anti-cheat on some servers
+
+### Rotation Tips
+
+- **Auto rotation type** works best for most scenarios
+- **Head targeting** is best for precision
+- **Feet targeting** works through blocks better
+- **Torso targeting** is most balanced
+
+Enable **Yaw Step** to prevent instant rotation snapping that looks suspicious.
+
+### Weapon Switching
+
+When **Auto Switch** is enabled, KillAura automatically finds and switches to your best weapon:
+
+1. Diamond/Netherite Sword (highest priority)
+2. Other swords
+3. Axes
+4. Mace
+5. Trident
+
+Use **Eat Pause** to prevent switching away from food while eating.
+
+## Integration
+
+### CatAura Integration
+
+KillAura automatically pauses when CatAura is placing or breaking crystals to prevent conflicts.
+
+### Priority Manager
+
+KillAura respects the Priority Manager and will not run if another module has locked usage.
+
+### AntiCheat Integration
+
+KillAura respects AntiCheat module settings for strafe fix when boosted by fireworks.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Not attacking any entities">
+    - Check if target entity type is enabled (Players, Mobs, etc.)
+    - Verify range is sufficient
+    - Ensure "Only Weapon" is disabled or you're holding a weapon
+    - Check if Priority Manager is locked
+  </Accordion>
+
+  <Accordion title="Attacking through walls">
+    - Decrease Walls Range setting
+    - This is normal behavior; walls range should be lower than regular range
+  </Accordion>
+
+  <Accordion title="Rotation looks suspicious">
+    - Enable Yaw Step for smoother rotation
+    - Try Auto rotation type instead of specific body parts
+    - Enable Persist for more consistent rotation
+  </Accordion>
+
+  <Accordion title="Getting kicked for speed">
+    - Use Cooldown mode instead of Delay
+    - If using Delay mode, lower Attack Speed
+    - Enable TPS Sync (Average or Last)
+  </Accordion>
+
+  <Accordion title="Module switching weapons while eating">
+    - Enable Eat Pause setting
+    - This requires Auto Switch to be enabled
+  </Accordion>
+</AccordionGroup>
+
+## Technical Details
+
+KillAura uses the EntityTargeter system for finding valid targets and implements smart rotation algorithms for natural-looking head movement.
+
+**Auto rotation type logic:**
+1. Calculates distances to head, torso, and feet
+2. Chooses closest point to player's eyes
+3. Uses feet if very close to avoid looking up
+
+The module runs during the Pre player tick event for optimal timing.
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/KillAura.java:39`
+
+Module category: Combat  
+Module name: "KillAura"
+Description: "KillAura: Clicks on opps"
+HUD info: "Single"

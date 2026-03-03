@@ -1,0 +1,250 @@
+---
+title: Configuration Overview
+description: Understanding Sn0w's configuration system and file structure
+---
+
+## Introduction
+
+Sn0w uses a YAML-based configuration system to save and load module settings, keybinds, and client preferences. All configuration files are stored in the `Sn0w` folder in your Minecraft directory.
+
+## Configuration Directory Structure
+
+```
+Minecraft Directory/
+└── Sn0w/
+    ├── configs/          # User-created config presets
+    │   ├── config1.yml
+    │   ├── config2.yml
+    │   └── basicconfig.yml
+    └── features/         # Individual module saves
+        ├── ModuleName.yml
+        └── ...
+```
+
+## Configuration System
+
+### Main Folder Location
+
+The configuration directory is located at:
+- **Path**: `<Minecraft Directory>/Sn0w/`
+- **Auto-created**: The folder is automatically created on first launch if it doesn't exist
+
+### Configuration Types
+
+#### 1. Feature Configs (Auto-save)
+
+Individual module configurations are automatically saved in `Sn0w/features/`:
+- Each module has its own `.yml` file
+- Automatically saved on client shutdown
+- Contains module state, settings, and values
+
+#### 2. User Configs (Manual save/load)
+
+Complete configuration snapshots saved in `Sn0w/configs/`:
+- Created using the `config` command
+- Contains all modules and their settings
+- Can be shared and loaded on demand
+- Supports multiple configuration presets
+
+## Config Command Usage
+
+### Save Configuration
+
+```
+.config save <name>
+```
+
+Saves all current module settings to `configs/<name>.yml`
+
+**Example**:
+```
+.config save pvp
+.config save mining
+.config save default
+```
+
+### Load Configuration
+
+```
+.config load <name>
+```
+
+Loads all settings from `configs/<name>.yml`, including enabled states and keybinds.
+
+**Example**:
+```
+.config load pvp
+```
+
+<Note>
+Loading a config will enable/disable modules and update all settings to match the saved configuration.
+</Note>
+
+### Soft Load Configuration
+
+```
+.config softload <name>
+```
+
+Loads settings but **excludes**:
+- Render and HUD modules
+- Client modules (except AntiCheat)
+- Keybinds (preserves current binds)
+- Colors (preserves current color settings)
+
+**Use case**: Load combat/movement settings without changing your visual setup.
+
+### List Available Configs
+
+```
+.config list
+```
+
+Displays all available configuration files in the configs folder.
+
+### Delete Configuration
+
+```
+.config delete <name>
+```
+or
+```
+.config del <name>
+```
+
+Permanently deletes the specified config file.
+
+### Open Config Folder
+
+```
+.config folder
+```
+or
+```
+.config open
+```
+
+Opens the `Sn0w/configs/` folder in your system file explorer.
+
+## Configuration Format
+
+Configs use YAML format with the following structure:
+
+```yaml
+ModuleName:
+  enabled: true/false
+  bind: <key_code>
+  chatNotify: true/false
+  visible: true/false
+  name: "Display Name"
+  settingName: value
+  colorSetting:
+    red: 0-255
+    green: 0-255
+    blue: 0-255
+    alpha: 0-255
+    sync: true/false
+```
+
+### Common Settings
+
+Every module configuration includes these base settings:
+
+| Setting | Type | Description |
+|---------|------|-------------|
+| `enabled` | Boolean | Whether the module is enabled |
+| `bind` | Integer/String | Keybind (key code or MOUSE_X) |
+| `chatNotify` | Boolean | Show chat notification on toggle |
+| `visible` | Boolean | Show in module list |
+| `name` | String | Display name for the module |
+
+## Savable System
+
+The configuration system implements the `ISavable` interface:
+
+```java
+public interface ISavable {
+    void load(Map<String, Object> data);
+    Map<String, Object> save();
+    String getFileName();
+    String getDirName();
+}
+```
+
+All modules extend `Feature`, which implements this interface for automatic serialization.
+
+## Config Loading Process
+
+1. **Startup**: Client loads individual feature configs from `features/` folder
+2. **Runtime**: User can load preset configs using `.config load <name>`
+3. **Shutdown**: Client automatically saves all feature configs
+
+<Info>
+The configuration system uses SnakeYAML with pretty printing enabled for human-readable files.
+</Info>
+
+## Best Practices
+
+### Backup Important Configs
+
+Before making major changes, save your current setup:
+```
+.config save backup_yyyy_mm_dd
+```
+
+### Organize Multiple Configs
+
+Create specialized configs for different scenarios:
+- `pvp.yml` - Combat-focused settings
+- `mining.yml` - Mining and movement
+- `default.yml` - Base configuration
+- `event.yml` - Event-specific setup
+
+### Share Configs
+
+Config files can be shared with other users:
+1. Navigate to `Minecraft/Sn0w/configs/`
+2. Copy the `.yml` file
+3. Share with others to replicate your setup
+
+## Troubleshooting
+
+### Config Not Loading
+
+**Error**: "Could not find config X.yml!"
+- Verify the file exists in `Sn0w/configs/`
+- Check for typos in the filename
+- Use `.config list` to see available configs
+
+### Settings Not Saving
+
+- Ensure the client has write permissions to the Minecraft directory
+- Check for corrupted YAML syntax if manually editing
+- Verify the `Sn0w` folder exists and is not read-only
+
+### Corrupted Config File
+
+If a config file becomes corrupted:
+1. Delete the problematic `.yml` file
+2. Restart the client to regenerate defaults
+3. Reconfigure settings and save a new config
+
+## Advanced: Manual Editing
+
+You can manually edit `.yml` files with a text editor:
+
+<Warning>
+Always close Minecraft before editing config files, as changes may be overwritten on client shutdown.
+</Warning>
+
+1. Navigate to `Minecraft/Sn0w/configs/`
+2. Open `.yml` file in a text editor
+3. Edit values following YAML syntax
+4. Save file
+5. Use `.config load <name>` in-game to apply changes
+
+## See Also
+
+- [Keybinds](/configuration/keybinds) - Learn how to bind modules to keys
+- [Config Files](/configuration/config-files) - Detailed file format reference
+- [Commands](/reference/commands/overview) - Full command reference

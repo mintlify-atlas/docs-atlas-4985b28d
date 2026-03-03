@@ -1,0 +1,341 @@
+---
+title: AutoAnchor
+description: Automated respawn anchor placement and explosion for combat
+---
+
+AutoAnchor automatically places and explodes respawn anchors to damage enemies. This module is particularly effective in the Overworld and End dimensions where anchors explode.
+
+<Warning>
+  AutoAnchor only works in the Overworld and End dimensions. Respawn anchors do not explode in the Nether.
+</Warning>
+
+## Overview
+
+AutoAnchor finds optimal positions to place respawn anchors, charges them with glowstone, and triggers explosions to damage nearby enemies. The module calculates damage similar to AutoCrystal but uses anchors instead of crystals.
+
+## Features
+
+- **Smart targeting** - Damage or range-based sorting
+- **Damage calculation** - Predicts explosion damage
+- **Auto placement** - Places anchors in optimal positions
+- **Auto charging** - Uses glowstone to charge anchors
+- **Auto explosion** - Triggers charged anchors
+- **Self-damage prevention** - Avoids suicidal placements
+- **Multi-threaded** - Async calculation for performance
+
+## Configuration
+
+### Calculation Settings
+
+<ParamField path="targetSorting" type="select" default="Damage">
+  Target selection method
+  - **Damage** - Prioritize highest damage opportunities
+  - **Range** - Target closest enemy
+</ParamField>
+
+<ParamField path="targetRange" type="number" default="7">
+  Maximum distance to target enemies (3-20 blocks)
+</ParamField>
+
+<ParamField path="minDmg" type="number" default="2">
+  Minimum damage required to place anchor (0-36)
+</ParamField>
+
+<ParamField path="maxSelfDmg" type="number" default="4">
+  Maximum self damage allowed (0-36)
+</ParamField>
+
+<ParamField path="noSuicide" type="boolean" default="false">
+  Prevent placing anchors that would kill you (Anti Suicide)
+</ParamField>
+
+<ParamField path="terrain" type="boolean" default="false">
+  Include terrain in damage calculation for accuracy
+</ParamField>
+
+<ParamField path="armorAssume" type="boolean" default="false">
+  Assume targets are wearing full armor
+</ParamField>
+
+<ParamField path="lethalCrystals" type="number" default="0">
+  Allow lethal placements if target has fewer totems (0-5)
+</ParamField>
+
+### Action Settings
+
+<ParamField path="placeRange" type="number" default="6">
+  Maximum range to place anchors (1-6 blocks)
+</ParamField>
+
+<ParamField path="placeWallsRange" type="number" default="3">
+  Maximum range when placing through walls (1-6 blocks)
+</ParamField>
+
+<ParamField path="autoSwitch" type="select" default="None">
+  Automatic item switching mode
+  - **None** - No auto-switching
+  - **Normal** - Regular hotbar switching
+  - **Silent** - Silent server-side switching
+  - **SilentBypass** - Bypass-focused silent switching
+</ParamField>
+
+<ParamField path="pause" type="boolean" default="false">
+  Pause switching while eating (requires Normal auto-switch)
+</ParamField>
+
+<ParamField path="strictDirection" type="boolean" default="false">
+  Only place on directly visible block faces
+</ParamField>
+
+### Timing Settings
+
+<ParamField path="placeDelay" type="number" default="1">
+  Delay between placing anchors in milliseconds (0-1000)
+</ParamField>
+
+<ParamField path="explodeDelay" type="number" default="1">
+  Delay between exploding anchors in milliseconds (0-1000)
+</ParamField>
+
+<ParamField path="timing" type="select" default="Soft">
+  Action execution timing
+  - **Soft** - Place and explode in same tick
+  - **Strict** - Separate placement and explosion ticks
+</ParamField>
+
+### Misc Settings
+
+<ParamField path="rotate" type="boolean" default="false">
+  Rotate towards placement positions
+</ParamField>
+
+<ParamField path="rotationsType" type="select" default="Simple">
+  Rotation calculation method (requires Rotate)
+  - **Simple** - Basic rotations
+  - **NCP** - NoCheatPlus compatible
+  - **GrimAbuse** - GrimAC exploit rotations
+</ParamField>
+
+<ParamField path="multiTask" type="select" default="None">
+  Behavior when using other items
+  - **None** - Always allow anchor actions
+  - **Soft** - Pause if using main hand
+  - **Strong** - Pause all usage
+</ParamField>
+
+<ParamField path="miningIgnore" type="select" default="None">
+  Interaction with mining modules
+  - **None** - No interaction
+  - **Ignore** - Pause when mining
+  - **StrictIgnore** - Complete pause during mining
+</ParamField>
+
+<ParamField path="swapWait" type="select" default="None">
+  Wait after item swapping
+  - **None** - No waiting
+  - **Semi** - Short wait
+  - **Full** - Full swap delay
+</ParamField>
+
+<ParamField path="swapWaitDelay" type="number" default="300">
+  Swap wait duration in milliseconds (50-500)
+</ParamField>
+
+### Render Settings
+
+<ParamField path="fillColor" type="color" default="rgba(0, 0, 0, 100)">
+  Fill color for rendered anchor positions
+</ParamField>
+
+<ParamField path="lineColor" type="color" default="rgba(255, 255, 255, 255)">
+  Outline color for rendered anchor positions
+</ParamField>
+
+<ParamField path="damageText" type="boolean" default="false">
+  Display damage numbers at positions (Damage Text)
+</ParamField>
+
+<ParamField path="textScale" type="number" default="1.4">
+  Size of damage text (1-2)
+</ParamField>
+
+<ParamField path="renderMode" type="select" default="Normal">
+  Rendering style (Type)
+  - **Normal** - Always show current position
+  - **Fade** - Fade out old positions
+</ParamField>
+
+<ParamField path="fadeTime" type="number" default="1000">
+  Fade out duration in milliseconds (100-2000)
+</ParamField>
+
+<ParamField path="futureFade" type="boolean" default="false">
+  Enable future rendering features (Future)
+</ParamField>
+
+## Usage
+
+### Required Items
+
+You need in your hotbar:
+1. **Respawn Anchor** - For placement
+2. **Glowstone** - For charging anchors
+3. **Totem** or other non-block item - For triggering explosion
+
+### Basic Setup
+
+1. Enable AutoAnchor from Combat category
+2. Ensure you're in Overworld or End dimension
+3. Put anchors and glowstone in hotbar
+4. Set appropriate damage thresholds
+5. Configure auto-switch mode
+
+### Dimension Restrictions
+
+<Warning>
+  AutoAnchor automatically disables in the Nether dimension where anchors function as respawn points instead of exploding.
+</Warning>
+
+The module checks `mc.world.getRegistryKey() == World.NETHER` and returns early if true.
+
+### Explosion Process
+
+1. **Place** - Module places uncharged anchor
+2. **Charge** - Right-clicks with glowstone (charges to 4)
+3. **Explode** - Right-clicks with non-glowstone item
+4. **Damage** - Anchor explodes, dealing damage
+
+### Auto Switch Modes
+
+**None**
+- Manual item management required
+- You must hold correct items at correct times
+
+**Normal**
+- Switches to anchors/glowstone in hotbar
+- Visible switching
+- Works on most servers
+
+**Silent**
+- Server-side item switching
+- Not visible to other players
+- May be detected by anti-cheat
+
+**SilentBypass**
+- Advanced silent switching
+- Uses inventory packets
+- Best bypass but most detectable
+
+## Strategy
+
+### Aggressive Setup
+- Min Damage: 6+
+- Place/Explode Delay: 0-50ms
+- Timing: Soft
+- Auto Switch: Silent or SilentBypass
+
+### Defensive Setup
+- Min Damage: 3-4
+- Max Self Damage: 3-4
+- Anti Suicide: Enabled
+- Timing: Strict
+
+### Legit Setup
+- Min Damage: 4-5
+- Delays: 100-200ms
+- Timing: Strict
+- Rotate: Enabled
+- Strict Direction: Enabled
+
+## Integration
+
+### Module Conflicts
+
+AutoAnchor pauses when:
+- **Phase** module is enabled
+- **Blink** module is enabled
+- **AutoBreak** performed an action
+- **PriorityManager** is locked by another module
+
+### Performance
+
+AutoAnchor uses a single-threaded executor for async calculation:
+```java
+private final ExecutorService executor = Executors.newFixedThreadPool(1);
+```
+
+This prevents lag from damage calculations affecting game performance.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Module not working at all">
+    - Check if you're in the Nether (module disabled there)
+    - Verify you have anchors in hotbar
+    - Ensure Auto Switch is enabled or manually hold anchor
+    - Check if another module locked Priority Manager
+  </Accordion>
+
+  <Accordion title="Anchors placing but not exploding">
+    - Check if you have glowstone in hotbar
+    - Verify you have a non-block item (totem) in hotbar
+    - Increase Explode Delay
+    - Check if target moved out of range
+  </Accordion>
+
+  <Accordion title="Taking too much self damage">
+    - Lower Max Self Damage setting
+    - Enable Anti Suicide
+    - Increase Min Damage threshold
+    - Enable Terrain calculation
+  </Accordion>
+
+  <Accordion title="Getting kicked by anti-cheat">
+    - Increase Place and Explode delays
+    - Use Strict timing instead of Soft
+    - Enable Strict Direction
+    - Use Normal auto-switch instead of Silent
+    - Enable Rotate
+  </Accordion>
+
+  <Accordion title="Module not targeting anyone">
+    - Increase Target Range
+    - Lower Min Damage requirement
+    - Check if enemies are within range
+    - Verify targets are valid players
+  </Accordion>
+</AccordionGroup>
+
+## Technical Details
+
+### Damage Calculation
+
+Uses `CrystalUtil.calculateDamage()` which accounts for:
+- Distance from explosion
+- Block protection
+- Armor reduction (if Assume enabled)
+- Terrain blocking (if Terrain enabled)
+
+### Anchor Charging
+
+Anchors can be charged 4 times with glowstone. AutoAnchor:
+1. Checks current charge level with `RespawnAnchorBlock.CHARGES`
+2. Charges if level is 0
+3. Explodes if level is 1-4
+
+### Placement Logic
+
+Searches a sphere around player for valid positions:
+```java
+BlockUtils.sphere(placeRange.getValue().doubleValue() + 1.0f, mc.player.getBlockPos(), true, false)
+```
+
+Calculates best position based on target damage vs self damage ratio.
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/AutoAnchor.java:56`
+
+Module category: Combat
+Module name: "AutoAnchor"
+Description: "AutoAnchor: Places and explodes respawn anchors to kill enemys"

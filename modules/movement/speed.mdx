@@ -1,0 +1,206 @@
+---
+title: Speed
+description: Move around at rapid speeds with multiple bypass modes
+---
+
+## Overview
+
+The Speed module allows you to move significantly faster than normal Minecraft movement speed. It includes multiple modes designed to bypass different anti-cheat systems while providing smooth, controllable movement.
+
+**Description:** Move around at rapid speeds
+
+## Speed Modes
+
+### Strafe
+The default and most versatile speed mode using strafe-jump mechanics.
+
+**Features:**
+- Automatic bunny-hopping
+- Speed accumulation system
+- Buffer option for smoother acceleration
+- Boost integration for explosive speed bursts
+
+**Settings:**
+- `Buffer` - Enhanced acceleration control (default: false)
+- `Boost` - Use boost manager for speed bursts (default: false)
+
+### StrafeFast
+An optimized version of Strafe with higher base speed values.
+
+**Best for:** Servers with lenient anti-cheat or private servers
+
+### StrafeStrict
+Strict NCP bypass mode with restricted speed caps.
+
+**Technical details:**
+- Base restriction: 0.465
+- Actual restriction: 0.44
+- Gradual speed accumulation
+- Falls down faster for better ground contact
+
+### StrictFast
+Hybrid mode that adapts based on speed potion effects.
+
+**Behavior:**
+- Uses full Strafe mode when Speed potion is active
+- Falls back to StrafeStrict without potion
+- Best for competitive PvP servers
+
+### StrafeInsano
+Experimental high-speed mode.
+
+<Warning>
+This mode is highly detectable and should only be used on servers with disabled anti-cheat.
+</Warning>
+
+### Vanilla
+Simple speed multiplier without bypass mechanics.
+
+**Settings:**
+- `Speed` - Speed multiplier (range: 0.01-2.00, default: 1.00)
+
+## Timer Options
+
+Timer modifies the game tick rate to increase effective speed.
+
+**Modes:**
+- `None` - No timer modification (default)
+- `0888` - 1.0888x tick speed
+- `Fast` - 1.0985x tick speed
+
+<Tip>
+Timer is most effective with strafe modes. The "0888" option provides a good balance between speed gain and detection risk.
+</Tip>
+
+<Warning>
+Timer modifications are easily detected by modern anti-cheat systems. Use sparingly and expect potential flags.
+</Warning>
+
+## Advanced Features
+
+### Boost Integration
+
+When enabled, Speed integrates with the Boost Manager to provide explosive speed bursts:
+- Activates during jump phase (state 2)
+- Maintains momentum during air phase (state 3)
+- Calculates optimal boost speed based on potion effects
+
+**Location:** Speed.java:261-262, 269-270, 368-369, 382-383
+
+### Buffer System
+
+The buffer option (Strafe mode only) provides advanced acceleration control:
+- Multiplies jump speed by 1.6835 when accelerating
+- Multiplies by 1.395 when decelerating
+- Creates a more controllable speed curve
+
+**Location:** Speed.java:256-257
+
+### Potion Effect Support
+
+Speed automatically adjusts for Minecraft potion effects:
+- **Speed Effect:** Increases base motion speed by 10% per amplifier level
+- **Jump Boost:** Adds jump height based on amplifier
+- **Slowness:** Reduces speed proportionally in strict modes
+
+## Configuration Examples
+
+### Competitive PvP
+```
+Mode: StrictFast
+Timer: None
+Buffer: false
+Boost: true
+```
+Balanced setup for competitive servers with active anti-cheat.
+
+### Casual Play
+```
+Mode: Strafe
+Timer: 0888
+Buffer: true
+Boost: false
+```
+Smooth, fast movement for general gameplay.
+
+### Maximum Speed (Risky)
+```
+Mode: StrafeFast
+Timer: Fast
+Buffer: false
+Boost: true
+```
+Highest speed potential, but very detectable.
+
+## Technical Details
+
+### Movement States
+
+Speed tracks movement through 4 states:
+1. **State 1:** Initial movement start
+2. **State 2:** Jump preparation (ground contact)
+3. **State 3:** Air phase (speed adjustment)
+4. **State 4+:** Momentum maintenance
+
+### Speed Calculation
+
+Base motion speed calculation:
+- Default: 0.2873
+- StrafeFast: 0.31
+- With Speed I: 0.3160 (Strafe) / 0.35 (StrafeFast)
+- Formula: `baseSpeed * (1.0 + (0.1 * (amplifier + 1)))`
+
+**Location:** Speed.java:469-484
+
+### Rubberband Protection
+
+Speed automatically resets when receiving position packets from the server (EntityPositionS2CPacket), preventing desyncs.
+
+**Location:** Speed.java:492-507
+
+## Usage Tips
+
+<Tip>
+For best results, enable Sprint module alongside Speed to maintain consistent sprinting.
+</Tip>
+
+<Tip>
+Speed mode is displayed in the HUD. Use this to quickly verify which mode is active during gameplay.
+</Tip>
+
+<Warning>
+Speed will automatically pause when LongJump is active in Strict modes to prevent conflicts.
+</Warning>
+
+<Warning>
+Speed is disabled when flying with elytra to prevent interference with ElytraFly module.
+</Warning>
+
+## Compatibility
+
+**Works with:**
+- Sprint (recommended)
+- TickBase (integrates with timer)
+- BoostManager
+- LongJump (auto-pauses when needed)
+
+**Conflicts with:**
+- ElytraFly (auto-disables)
+- Other movement speed modifications
+
+## Troubleshooting
+
+**Speed resets frequently**
+- Server is rubberbanding you back
+- Try a more conservative mode (StrafeStrict or StrictFast)
+- Disable timer or reduce boost
+
+**Not moving faster**
+- Ensure you're actually moving (W/A/S/D pressed)
+- Check if another module is conflicting
+- Verify Sprint is enabled
+
+**Getting kicked for flying**
+- Reduce timer speed or disable it
+- Switch to StrafeStrict mode
+- Disable boost option

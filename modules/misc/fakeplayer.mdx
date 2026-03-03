@@ -1,0 +1,323 @@
+---
+title: FakePlayer
+description: Spawns a client-side fake player for testing and fun
+icon: ghost
+---
+
+## Overview
+
+FakePlayer spawns a client-side ghost player that mimics a real player entity. It can be used for testing crystal damage, recording and replaying movements, or just for visual effects. The fake player has health, can take damage, use totems, and even die.
+
+## Features
+
+- Three operating modes: Normal, Record, and Play
+- Takes realistic damage from crystals and melee
+- Uses totems when health reaches zero
+- Records and replays player movements
+- Full armor and item rendering
+- Client-side only (other players can't see it)
+
+## Settings
+
+<ParamField path="Ghost Name" type="string" default="Catgirl">
+  The name displayed above the fake player's head
+</ParamField>
+
+<ParamField path="Task" type="enum" default="Record">
+  Operating mode for the fake player
+  
+  - **Normal**: Static ghost at spawn position
+  - **Record**: Records your movements while enabled
+  - **Play**: Replays recorded movements in a loop
+</ParamField>
+
+## Operating Modes
+
+<Tabs>
+  <Tab title="Normal Mode">
+    ### Basic Ghost
+    
+    Spawns a static fake player at your current position:
+    - Copies your current position and rotation
+    - Copies your equipped items and armor
+    - Has 36 health (20 HP + absorption)
+    - Can be attacked and damaged
+    - Will use totem if killed
+    
+    **Use Cases:**
+    - Test crystal damage at specific positions
+    - Practice aiming on a stationary target
+    - Visual reference point in builds
+  </Tab>
+  
+  <Tab title="Record Mode">
+    ### Movement Recording
+    
+    Records your movements while the module is enabled:
+    1. Enable with Record mode
+    2. Move around as desired
+    3. Disable to save the recording
+    
+    **Recorded Data:**
+    - Position (X, Y, Z)
+    - Rotation (Yaw, Pitch, Head)
+    - Velocity vectors
+    
+    **Tip:** Recordings persist until you record again or clear them
+  </Tab>
+  
+  <Tab title="Play Mode">
+    ### Playback
+    
+    Spawns a ghost that replays your recorded movements:
+    - Loops the recording continuously
+    - Ghost mimics exact positions and rotations
+    - Updates every other tick for smooth playback
+    - Can still take damage during playback
+    
+    **Use Cases:**
+    - Test damage while moving
+    - Create fake player decoys
+    - Visualize movement patterns
+  </Tab>
+</Tabs>
+
+## How to Use
+
+<Steps>
+  <Step title="Spawn a Basic Ghost">
+    1. Set Task to "Normal"
+    2. Enable the module
+    3. Ghost spawns at your location
+    4. Attack it to test damage
+  </Step>
+  
+  <Step title="Record Movements">
+    1. Set Task to "Record"
+    2. Enable the module (see "Recording!" message)
+    3. Perform the movements you want to record
+    4. Disable the module (recording saved)
+  </Step>
+  
+  <Step title="Playback Recording">
+    1. Set Task to "Play"
+    2. Enable the module
+    3. Ghost replays your recorded movements
+    4. Loops indefinitely until disabled
+  </Step>
+</Steps>
+
+## Damage Mechanics
+
+### Melee Damage
+
+The fake player takes realistic melee damage:
+
+```java
+// Located at: misc/FakePlayer.java:186-217
+@SubscribeEvent
+public void onAttack(LivingEvent.Attack event) {
+    if (event.getEntity() == fakePlayer && (fakePlayer.hurtTime == 0)) {
+        // Play hurt sound
+        mc.world.playSound(mc.player, fakePlayer.getX(), fakePlayer.getY(), 
+            fakePlayer.getZ(), SoundEvents.ENTITY_PLAYER_HURT, 
+            SoundCategory.PLAYERS, 1f, 1f);
+        
+        // Calculate damage
+        if (mc.player.getAttackCooldownProgress(20) >= 0.85)
+            fakePlayer.setHealth(fakePlayer.getHealth() + 
+                fakePlayer.getAbsorptionAmount() - 
+                InventoryUtils.getHitDamage(mc.player.getMainHandStack(), fakePlayer));
+        else 
+            fakePlayer.setHealth(fakePlayer.getHealth() + 
+                fakePlayer.getAbsorptionAmount() - 1f);
+    }
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Critical Hits">
+    - Detects when you're falling for critical hits
+    - Plays critical hit sound effect
+    - Applies critical damage multiplier
+  </Accordion>
+  
+  <Accordion title="Cooldown System">
+    - Full damage when attack cooldown >= 85%
+    - Reduced damage (1 HP) for weak attacks
+    - Matches vanilla combat mechanics
+  </Accordion>
+</AccordionGroup>
+
+### Crystal Damage
+
+Accurate end crystal explosion damage:
+
+```java
+// Located at: misc/FakePlayer.java:220-252
+public void onExplosion(ExplosionS2CPacket explosion) {
+    if ((fakePlayer.hurtTime == 0 || crystalAvailable)) {
+        fakePlayer.setHealth((fakePlayer.getHealth() + fakePlayer.getAbsorptionAmount()) - 
+            CrystalUtil.calculateDamage(fakePlayer, 
+                new Vec3d(explosion.getX(), explosion.getY(), explosion.getZ()), 
+                false, false));
+    }
+}
+```
+
+<Info>
+  Crystal damage calculation uses the same algorithm as CrystalAura, making it perfect for testing crystal damage at various positions.
+</Info>
+
+### Totem Pop
+
+When the ghost's health reaches zero:
+1. Checks if holding totem in offhand
+2. Attempts to use totem
+3. Plays totem pop animation
+4. Resets health to 10 HP
+5. Shows pop notification
+
+## Technical Details
+
+### Entity Properties
+
+```java
+// Located at: misc/FakePlayer.java:93-109
+fakePlayer = new OtherClientPlayerEntity(mc.world, 
+    new GameProfile(UUID.fromString("5300a928-b781-440a-8581-19343b39d29d"), 
+    fakeName.getValue()));
+
+fakePlayer.copyPositionAndRotation(mc.player);
+fakePlayer.bodyYaw = mc.player.getBodyYaw();
+fakePlayer.headYaw = mc.player.getHeadYaw();
+fakePlayer.setHealth(36);
+
+// Copy equipment
+fakePlayer.setStackInHand(Hand.MAIN_HAND, mc.player.getMainHandStack().copy());
+fakePlayer.getInventory().setStack(36, mc.player.getInventory().getStack(36).copy()); // Helmet
+fakePlayer.getInventory().setStack(37, mc.player.getInventory().getStack(37).copy()); // Chestplate
+fakePlayer.getInventory().setStack(38, mc.player.getInventory().getStack(38).copy()); // Leggings
+fakePlayer.getInventory().setStack(39, mc.player.getInventory().getStack(39).copy()); // Boots
+
+// Add status effects
+fakePlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 9999, 2));
+fakePlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION, 9999, 4));
+fakePlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 9999, 1));
+```
+
+### Movement Recording
+
+Recordings store complete movement data:
+
+```java
+private static class Location {
+    private final double x, y, z;
+    private final float yaw, pitch, head;
+    private final Vec3d velocity;
+    
+    public Location(PlayerEntity player) {
+        this.x = player.getX();
+        this.y = player.getY();
+        this.z = player.getZ();
+        this.yaw = player.getYaw();
+        this.pitch = player.getPitch();
+        this.head = player.getHeadYaw();
+        this.velocity = player.getVelocity();
+    }
+}
+```
+
+## Usage Examples
+
+<CodeGroup>
+```text Crystal Damage Testing
+1. Set Task to "Normal"
+2. Enable FakePlayer at test position
+3. Place end crystal near ghost
+4. Detonate and observe damage
+5. Ghost shows realistic damage values
+```
+
+```text Movement Pattern
+1. Set Task to "Record"
+2. Enable and perform a strafe pattern
+3. Disable to save recording
+4. Set Task to "Play"
+5. Enable to see ghost repeat pattern
+6. Test crystals on moving target
+```
+
+```text Totem Testing
+1. Spawn ghost with "Normal" mode
+2. Attack until health reaches 0
+3. Ghost pops totem automatically
+4. Health resets to 10 HP
+5. Can test multiple pops
+```
+</CodeGroup>
+
+## Notifications
+
+FakePlayer provides visual notifications:
+
+<Tabs>
+  <Tab title="Spawn">
+    ```
+    Green notification: "Spawned ghost [Name]!"
+    Duration: 1 second
+    ```
+  </Tab>
+  
+  <Tab title="Remove">
+    ```
+    Red notification: "Removed ghost [Name]!"
+    Duration: 1 second
+    ```
+  </Tab>
+  
+  <Tab title="Death">
+    ```
+    Red notification: "Ghost [Name] died!"
+    Duration: 1 second
+    Auto-disables module
+    ```
+  </Tab>
+  
+  <Tab title="Recording">
+    ```
+    Chat: "Recording! Disable the module to stop recording."
+    Chat: "Saved Recording!" (when disabled)
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Testing Position" icon="location-dot">
+    Use Normal mode to test damage at specific coordinates for CrystalAura configuration
+  </Card>
+  
+  <Card title="Movement Patterns" icon="diagram-project">
+    Record common PvP movements to test damage on moving targets
+  </Card>
+  
+  <Card title="Name It Clearly" icon="tag">
+    Use descriptive ghost names to remember which test each ghost represents
+  </Card>
+  
+  <Card title="Clear Old Recordings" icon="trash">
+    Clear recordings when not needed to avoid confusion
+  </Card>
+</CardGroup>
+
+<Warning>
+  FakePlayer is client-side only. Other players cannot see your ghost, but they can see your crystals and attacks.
+</Warning>
+
+## Related Modules
+
+- **CrystalAura**: Use FakePlayer to test crystal damage calculations
+- **AutoCrystal**: Optimize placement by testing on fake players
+- **Freecam**: Combine with Freecam to view ghost from different angles

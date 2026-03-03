@@ -1,0 +1,132 @@
+---
+title: AutoTool
+description: Automatically switches to the best tool for breaking blocks
+icon: pickaxe
+---
+
+## Overview
+
+AutoTool automatically switches your hotbar to the most efficient tool when breaking blocks. It detects which block you're mining and selects the appropriate tool from your hotbar.
+
+## Features
+
+- Automatic tool selection based on block type
+- Syncs with server to prevent desync
+- Works with all vanilla and modded tools
+- Respects block hardness calculations
+
+## How It Works
+
+<Steps>
+  <Step title="Block Detection">
+    When you start breaking a block, AutoTool detects the block type and state
+  </Step>
+  <Step title="Tool Analysis">
+    Scans your hotbar for all available tools and calculates mining speed for each
+  </Step>
+  <Step title="Automatic Switch">
+    Switches to the slot with the most efficient tool
+  </Step>
+  <Step title="Server Sync">
+    Syncs the slot change with the server to prevent desync issues
+  </Step>
+</Steps>
+
+## Configuration
+
+<Info>
+  This module has no additional settings - it works automatically when enabled.
+</Info>
+
+## Technical Details
+
+### Source Reference
+
+```java
+// Located at: misc/AutoTool.java:22-38
+@SubscribeEvent
+public void onBreakBlock(LivingEvent.AttackBlock event) {
+    BlockState state = event.getState();
+    
+    if (state.getBlock() != Blocks.AIR && MineUtils.canBreak(event.getPos())) {
+        int slot = InventoryUtils.getBestToolSlot(state.getBlock());
+        if (slot != -1 && mc.player.getInventory().selectedSlot != slot) {
+            mc.player.getInventory().selectedSlot = slot;
+            ((IClientPlayerInteractionManager) mc.interactionManager).doSyncSelectedSlot();
+        }
+    }
+}
+```
+
+### Tool Selection Algorithm
+
+The module uses `InventoryUtils.getBestToolSlot()` which:
+1. Checks all 9 hotbar slots
+2. Calculates mining speed multipliers for each tool
+3. Considers enchantments (Efficiency, etc.)
+4. Returns the slot with the fastest mining speed
+
+## Usage Examples
+
+<CodeGroup>
+```text Mining Efficiency
+1. Enable AutoTool
+2. Have multiple tools in hotbar:
+   - Diamond Pickaxe (Slot 1)
+   - Diamond Axe (Slot 2)
+   - Diamond Shovel (Slot 3)
+3. Mine stone -> Auto switches to pickaxe
+4. Mine wood -> Auto switches to axe
+5. Mine dirt -> Auto switches to shovel
+```
+
+```text PvP Scenario
+1. Enable AutoTool
+2. Breaking opponent's obsidian:
+   - Automatically selects pickaxe
+3. Breaking bed blocks:
+   - Automatically selects best tool
+4. Returns to sword after breaking
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Tool Organization" icon="grip-vertical">
+    Keep your tools in consistent hotbar slots for muscle memory
+  </Card>
+  <Card title="Backup Tools" icon="clone">
+    Carry backup tools in case one breaks
+  </Card>
+  <Card title="Enchantments" icon="sparkles">
+    Use Efficiency enchantments for maximum benefit
+  </Card>
+  <Card title="Durability" icon="heart">
+    Monitor tool durability to avoid breaking mid-mine
+  </Card>
+</CardGroup>
+
+## Compatibility
+
+<Tabs>
+  <Tab title="Compatible">
+    - All vanilla tools
+    - Most modded tools
+    - Custom block types
+    - All game modes
+  </Tab>
+  <Tab title="Known Issues">
+    - May not work with some custom block mods
+    - Server-side anti-cheat may limit switching speed
+  </Tab>
+</Tabs>
+
+<Warning>
+  Some servers may flag rapid tool switching as suspicious. Use with caution on strict anti-cheat servers.
+</Warning>
+
+## Related Modules
+
+- **AutoReplenish**: Automatically refills broken tools
+- **Nuker**: Mass block breaking with automatic tool selection

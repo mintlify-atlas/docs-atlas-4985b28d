@@ -1,0 +1,221 @@
+---
+title: Flight
+description: Fly through the air with creative or elytra-based flight modes
+---
+
+## Overview
+
+The Flight module allows you to fly through the air like creative mode or using advanced elytra packet manipulation. It provides precise control over horizontal and vertical movement with built-in anti-kick features.
+
+**Description:** I just flew 100 blocks thanks to sn0wgod.cc! (or now catogod.cc)
+
+## Flight Modes
+
+### Creative
+
+Classic creative-mode style flight with full directional control.
+
+**Features:**
+- Independent horizontal and vertical speed control
+- Jump key to ascend, Sneak key to descend
+- Optional anti-kick system
+- Zero gravity when stationary
+
+**Settings:**
+- `Horizontal` - Horizontal flight speed (range: 1-5, default: 3)
+- `Vertical` - Vertical flight speed (range: 1-5, default: 3)
+- `AntiKick` - Periodically descend slightly to avoid kick (default: false)
+
+**How it works:**
+- Sets vertical motion to 0.0 when not ascending/descending
+- Every 3.8 seconds (if AntiKick enabled), briefly applies -0.04 motion
+- Calculates horizontal movement using yaw rotation
+
+**Location:** Flight.java:79-110
+
+### Grim
+
+Advanced elytra-based flight using packet manipulation to bypass GrimAC.
+
+**Features:**
+- Automatic elytra equip/unequip
+- Firework boost support
+- Auto-jump when on ground
+- Integrates with ElytraFly boost system
+
+**Settings:**
+- `Pitch` - Control pitch rotation (default: false)
+- `Firework` - Auto-use fireworks for boost (default: false)
+
+**Requirements:**
+- Elytra in inventory (armor slot or inventory)
+- Will automatically swap to chest armor slot if needed
+
+<Tip>
+Grim mode automatically handles the elytra toggle, so you don't need to manually equip it. Just enable the module and start flying!
+</Tip>
+
+**Location:** Flight.java:111-180
+
+## Anti-Kick System
+
+The anti-kick feature prevents server timeouts during long flight sessions.
+
+**How it works:**
+- Uses a timer that triggers every 3800ms
+- Applies a small downward motion (-0.04) for one tick
+- Imperceptible to player but prevents server kick
+
+**Location:** Flight.java:61, 81-85
+
+<Warning>
+Anti-kick is only available in Creative mode. Grim mode relies on elytra mechanics which naturally prevent kick detection.
+</Warning>
+
+## Configuration Examples
+
+### Fast Creative Flight
+```
+Mode: Creative
+Horizontal: 5
+Vertical: 5
+AntiKick: true
+```
+Maximum speed creative flight with kick protection. Best for servers with creative permissions or disabled flight checks.
+
+### Slow & Stealthy
+```
+Mode: Creative
+Horizontal: 1
+Vertical: 2
+AntiKick: true
+```
+Slower, more controlled flight that's less likely to trigger velocity checks.
+
+### GrimAC Bypass
+```
+Mode: Grim
+Pitch: false
+Firework: true
+```
+Full elytra-based flight with automatic firework boosting for speed.
+
+## Advanced Usage
+
+### Grim Mode Details
+
+Grim mode uses sophisticated packet techniques:
+
+1. **Elytra Management**
+   - Detects elytra in inventory (checks slot with `InventoryUtils`)
+   - Swaps to chest armor slot if not equipped
+   - Sends `START_FALL_FLYING` packet
+   - Swaps back to original armor after activation
+
+2. **Movement Control**
+   - Sets rotation to move yaw + pitch control
+   - Calls `ElytraFly.doBoost()` for acceleration
+   - Automatically jumps when touching ground
+   - Cancels normal jump events to prevent interruption
+
+3. **Firework Integration**
+   - 400ms delay between firework uses
+   - Checks if already boosted before using
+   - Only activates when not on ground
+   - Integrates with MiddleClick module for manual firework control
+
+**Location:** Flight.java:127-180
+
+### Pitch Control
+
+When enabled in Grim mode, pitch control uses the same system as ElytraFly:
+- Calculates control pitch based on jump/sneak keys
+- Applies rotation through `RotationUtils`
+- Priority: 99 (very high, overrides most other rotations)
+
+**Location:** Flight.java:70
+
+## Movement Mechanics
+
+### Creative Mode Calculation
+
+The horizontal movement uses trigonometric calculation:
+
+```java
+double rx = Math.cos(Math.toRadians(yaw + 90.0f));
+double rz = Math.sin(Math.toRadians(yaw + 90.0f));
+motionX = (forward * speed * rx) + (strafe * speed * rz);
+motionZ = (forward * speed * rz) - (strafe * speed * rx);
+```
+
+This provides smooth, direction-accurate movement regardless of camera angle.
+
+**Location:** Flight.java:96-109
+
+## Static Helper Method
+
+### isGrimFlying()
+
+Other modules can check if Grim flight is active:
+
+```java
+if (Flight.isGrimFlying()) {
+    // Grim flight is active and elytra is available
+}
+```
+
+This prevents conflicts with other elytra-based modules.
+
+**Location:** Flight.java:211-220
+
+## Usage Tips
+
+<Tip>
+For Creative mode, start with moderate speeds (2-3) and gradually increase if the server allows it. High speeds are more detectable.
+</Tip>
+
+<Tip>
+Grim mode works best on servers with GrimAC anti-cheat. It may not be necessary or effective on other anti-cheat systems.
+</Tip>
+
+<Warning>
+Flying without proper permissions or on servers with strict anti-cheat will likely result in kicks or bans. Use responsibly.
+</Warning>
+
+<Warning>
+Grim mode requires an elytra. The module will not function if you don't have one in your inventory.
+</Warning>
+
+## Compatibility
+
+**Works with:**
+- ElytraFly (Grim mode integrates with it)
+- MiddleClick (firework integration)
+- RotationUtils (automatic rotation handling)
+
+**Conflicts with:**
+- Other flight modules
+- NoFall may need adjustment
+- Speed module (different movement systems)
+
+## Troubleshooting
+
+**Getting kicked immediately**
+- Enable AntiKick in Creative mode
+- Reduce flight speed
+- Try Grim mode if Creative is detected
+
+**Grim mode not activating**
+- Verify you have an elytra in inventory
+- Check that elytra has durability remaining
+- Ensure you're not in water or on ground when enabling
+
+**Fireworks not working**
+- Enable the Firework setting in Grim mode
+- Ensure you have fireworks in inventory
+- Wait for 400ms cooldown between uses
+
+**Movement feels jerky**
+- Reduce speed values
+- Disable boost if enabled
+- Check server TPS (lag can cause jittery movement)

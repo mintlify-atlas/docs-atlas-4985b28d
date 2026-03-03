@@ -1,0 +1,238 @@
+---
+title: AutoTotem
+description: Automatic totem of undying management for your offhand
+---
+
+AutoTotem automatically manages your offhand, placing totems when you're in danger and switching to other items when safe. This is an essential survival module for PvP.
+
+## Overview
+
+AutoTotem monitors your health and automatically moves totems of undying to your offhand when needed. When your health is above the threshold, it can switch to crystals, gapples, or other items based on your configuration.
+
+## Features
+
+- **Smart health monitoring** - Tracks health + absorption
+- **Automatic item swapping** - Moves totems to offhand when needed
+- **Configurable thresholds** - Set when to switch to totems
+- **Sword gap feature** - Auto-gapple when attacking with sword
+- **Multiple item modes** - Choose what to hold when safe
+- **Fast mode** - Instant swapping for clutch situations
+
+## Configuration
+
+### Core Settings
+
+<ParamField path="fast" type="boolean" default="false">
+  Enable instant swapping without delay
+</ParamField>
+
+<ParamField path="totemHealth" type="number" default="15">
+  Health + absorption below which to equip totem (0-36)
+</ParamField>
+
+<ParamField path="delay" type="number" default="0">
+  Delay between swaps in milliseconds (0-300ms)
+</ParamField>
+
+### Item Selection
+
+<ParamField path="item" type="select" default="Totem">
+  Item to hold when above health threshold
+  - **Totem** - Always hold totem (safest)
+  - **Gapple** - Hold enchanted golden apple
+  - **Crystal** - Hold end crystal (for PvP)
+</ParamField>
+
+### Sword Gap Feature
+
+<ParamField path="swordGap" type="boolean" default="false">
+  Automatically switch to gapple when right-clicking with sword
+</ParamField>
+
+<ParamField path="swordHealth" type="number" default="15">
+  Minimum health required to use Sword Gap feature (0-36)
+</ParamField>
+
+<Note>
+  Sword Gap only works when holding a diamond or netherite sword and your health is above the threshold.
+</Note>
+
+## Usage
+
+### Basic Setup
+
+1. Enable AutoTotem from the Combat category
+2. Set your totem health threshold (15-20 recommended)
+3. Choose what item to hold when safe
+4. Keep totems in your inventory
+
+### Health Thresholds
+
+**Totem Health** determines when totems are equipped:
+- **16-20** - Safe threshold for most scenarios
+- **12-15** - Balanced, allows using other items
+- **8-11** - Risky, maximum time with other items
+- **4-7** - Very risky, only for experienced players
+
+<Warning>
+  Setting Totem Health too low can result in death if you take burst damage before the totem swaps.
+</Warning>
+
+### Item Modes Explained
+
+**Totem Mode**
+- Always keeps totem in offhand
+- Safest option
+- Recommended for beginners
+
+**Gapple Mode**
+- Holds enchanted golden apple when safe
+- Quick healing available
+- Good for general PvP
+
+**Crystal Mode**
+- Holds end crystal when safe
+- For aggressive crystal PvP
+- Requires high totem health threshold
+
+### Sword Gap Usage
+
+The Sword Gap feature provides smart gapple usage:
+
+1. Hold diamond or netherite sword
+2. Health must be above Sword Health threshold
+3. Hold right-click (use key)
+4. AutoTotem automatically equips gapple
+5. Release to return to normal behavior
+
+This allows quick healing mid-combat without manually switching items.
+
+## Fast Mode
+
+When **Fast** is enabled:
+- No delay between swaps
+- Instant totem equipping
+- Better clutch survival
+- May be detected by strict anti-cheats
+
+Disable Fast mode on servers with strict anti-cheat.
+
+## Inventory Requirements
+
+AutoTotem works with items anywhere in your inventory (not just hotbar). It will:
+
+1. Search entire inventory for totems/selected items
+2. Move them to offhand as needed
+3. Swap existing offhand item back to inventory
+
+<Info>
+  Keep multiple totems in inventory. The module shows totem count in HUD.
+</Info>
+
+## GUI Interaction
+
+AutoTotem pauses when you have a GUI open (except inventory screen) to prevent:
+- Accidentally moving items while trading
+- Swapping items in chests/containers
+- Interfering with other inventory operations
+
+## HUD Display
+
+When AutoTotem is active, the HUD shows your current totem count:
+```
+AutoTotem [5]
+```
+
+This displays total totems in inventory, helping you track supply.
+
+## Integration
+
+### Other Combat Modules
+
+AutoTotem works seamlessly with:
+- **CatAura** - Switches to crystal when safe for offensive play
+- **KillAura** - Ensures totem is equipped during combat
+- **Criticals** - Maintains totems through critical attacks
+
+### Timing Considerations
+
+The module runs on player tick Pre event, checking health every tick (50ms) for responsive swapping.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Totem not equipping when low health">
+    - Check if you have totems in inventory
+    - Verify Totem Health threshold isn't set too low
+    - Ensure Delay isn't too high
+    - Check if you have a GUI open
+  </Accordion>
+
+  <Accordion title="Constantly swapping items">
+    - Your health is near the threshold, causing oscillation
+    - Increase Totem Health by 2-4 points
+    - Add a small Delay (50-100ms)
+  </Accordion>
+
+  <Accordion title="Sword Gap not working">
+    - Must be holding diamond or netherite sword
+    - Health must be above Sword Health threshold
+    - Must be pressing right-click (use key)
+    - GUI must be closed
+  </Accordion>
+
+  <Accordion title="Running out of totems">
+    - Module shows totem count in HUD
+    - Keep at least 5-10 totems in inventory
+    - Consider adjusting playstyle to take less damage
+  </Accordion>
+
+  <Accordion title="Getting kicked for inventory actions">
+    - Enable a small Delay (50-100ms)
+    - Disable Fast mode
+    - Some servers have strict anti-cheat for inventory manipulation
+  </Accordion>
+</AccordionGroup>
+
+## Strategy Tips
+
+### Conservative Play
+- Totem Health: 18-20
+- Item Mode: Totem
+- Sword Gap: Disabled
+- Fast: Enabled
+
+### Balanced Play
+- Totem Health: 14-16
+- Item Mode: Gapple
+- Sword Gap: Enabled (16)
+- Fast: Enabled
+
+### Aggressive Play
+- Totem Health: 12-14
+- Item Mode: Crystal
+- Sword Gap: Enabled (14)
+- Fast: Enabled
+
+<Warning>
+  Aggressive settings require skill and fast reactions. Death is more likely if you misjudge damage intake.
+</Warning>
+
+## Technical Details
+
+AutoTotem uses the `InventoryUtils.moveItemToOffhand()` method which:
+1. Finds the desired item in inventory
+2. Calculates optimal swap path
+3. Sends inventory click packets
+4. Updates client-side inventory state
+
+The **Fast** parameter controls whether the swap waits for server confirmation or proceeds immediately.
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/AutoTotem.java:16`
+
+Module category: Combat
+Module name: "AutoTotem"
+Description: "AutoTotem: Attempts to put totem/whatever item into ur offhand when needed"
+HUD info: Displays totem count

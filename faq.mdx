@@ -1,0 +1,230 @@
+---
+title: Frequently Asked Questions
+description: Common questions and answers about using and configuring Sn0w
+---
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="How do I unbind a module?">
+    You can unbind a module by **right-clicking** the bind button in the Sn0w GUI menu.
+    
+    1. Open the Sn0w menu (default: Right Shift)
+    2. Navigate to the module you want to unbind
+    3. Right-click on the bind/key indicator
+    4. The module will now be unbound
+  </Accordion>
+  
+  <Accordion title="How do I bind something to my mouse button?">
+    Mouse button binds must be configured manually in the `config.yml` file:
+    
+    1. Close Minecraft
+    2. Navigate to your `.minecraft` folder
+    3. Open `config.yml` in a text editor
+    4. Find the module you want to bind
+    5. Change the bind value to a mouse button (e.g., `MOUSE_4`)
+    
+    Example:
+    ```yaml
+    module_name:
+      bind: MOUSE_4
+      enabled: false
+    ```
+    
+    Available mouse buttons: `MOUSE_1`, `MOUSE_2`, `MOUSE_3`, `MOUSE_4`, `MOUSE_5`
+    
+    <Note>
+      See the [Module.java source code](https://github.com/Skitttyy/Sn0w/blob/main/src/main/java/me/skitttyy/kami/api/feature/module/Module.java#L226) for all available bind options.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="How do I request a feature?">
+    Feature requests are limited to critical issues. The developer may return to update the client when:
+    
+    - Major changes in the PVP meta occur
+    - The client gets patched entirely (e.g., doublemine, crystal aura)
+    - Features become completely unusable
+    
+    To request a feature:
+    1. Go to the [GitHub Issues page](https://github.com/Skitttyy/Sn0w/issues)
+    2. Create a new issue
+    3. Clearly describe if the feature is **completely broken** (not just scuffed)
+    4. The developer will update if it's critically broken
+    
+    <Warning>
+      Don't create issues for features that are just "scuffed" or don't work the way you want. Only report completely unusable features.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="How do I configure this client? It is so different than what I'm used to.">
+    The short answer: **You don't.** The developer recommends asking them to configure it for you.
+    
+    Why?
+    - This client wasn't meant for public use
+    - All previous users have exclusively used Sn0w for years
+    - The client is built around a very specific playstyle
+    - Features may not work as you expect from other clients
+    - Configuration is complex and unintuitive for new users
+    
+    If you need help configuring:
+    - Create an issue on GitHub with your specific use case
+    - Ask in the community for configuration advice
+    - Be prepared for a learning curve
+    
+    <Tip>
+      This client requires time to learn. Don't expect it to work like Phobos, Future, or other popular clients.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## About Sn0w
+
+<AccordionGroup>
+  <Accordion title="Why did you release this client? It was so private?">
+    The developer released Sn0w for several reasons:
+    
+    - Quit anarchy almost entirely since 2022
+    - Users were pressuring and threatening to leak the client
+    - Been pestered to update the client repeatedly
+    - Lost motivation to continue development
+    - Even opened the client as a scam once under user pressure
+    
+    The client was never meant for public release, which is why it may feel rough around the edges or crash frequently. It was built for a small group of private users over 5 years.
+  </Accordion>
+  
+  <Accordion title="What is the history of this client?">
+    Sn0w has an interesting development history:
+    
+    **Early Days (2020):**
+    - Started as a Kami skid for 8b8t
+    - Developer didn't know how to code initially
+    - Modified modules using JByteMod and renamed features
+    
+    **Mid Development:**
+    - Found Hephaestus buildable source (or viknet)
+    - Gradually learned proper coding through practice
+    - Became skilled at cheating on servers like Hypixel, 2b2t, etc.
+    - Developed deep knowledge of anti-cheats and exploits
+    
+    **Kami5 Era:**
+    - Made a deal with 0IMAX: traded chorus blink exploit for phasewalk
+    - Eventually acquired the entire Kami5 base
+    - Built Sn0w on top of Kami5 foundation
+    
+    **Modern Era (2020-2025):**
+    - Updated through multiple Minecraft versions
+    - Ported from 1.12.2 to 1.21.1 in under a month
+    - Developer quit in 2022, only updating when necessary
+    - Released publicly in 2025
+    
+    <Note>
+      The developer is now 18 and started working on this client at age 13. They're now focusing on college (digital forensics) and personal life.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="Where are you going? You have been a major figure in this community for so long">
+    The developer is moving on from the anarchy community to focus on:
+    
+    - **College:** Studying digital forensics
+    - **Personal Life:** Spending time with their girlfriend
+    - **Gaming:** Enjoying other games they couldn't play while focused on anarchy
+    - **Career:** Building skills for their future career
+    
+    They may return to update Sn0w when major changes happen or if critical features break completely, but don't plan to actively develop or support the client.
+  </Accordion>
+</AccordionGroup>
+
+## Technical Questions
+
+<AccordionGroup>
+  <Accordion title="What servers does Sn0w work on?">
+    Sn0w has been tested and optimized for:
+    
+    - **2b2t** - With Constantine bypass
+    - **5b5t** - Full anti-cheat disabler
+    - **0b0t** - Full anti-cheat disabler
+    - **Grim servers** - Custom bypasses developed
+    - **Strict servers** - Various exploits available
+    
+    <Warning>
+      Server bypasses may be patched over time. The developer is no longer actively maintaining bypasses.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="Will I crash using this client?">
+    **Yes, you will crash.** This is expected behavior.
+    
+    Why?
+    - Single developer working on a complex standalone client
+    - Built over 5 years with various code sources
+    - Not designed for public use
+    - Some bugs were never fixed because private users worked around them
+    - Not premium quality like commercial clients
+    
+    The developer is honest about this: "You WILL crash, and you will run into issues."
+    
+    <Tip>
+      If you can't handle crashes and bugs, this client may not be for you. It's powerful but unstable.
+    </Tip>
+  </Accordion>
+  
+  <Accordion title="What makes Sn0w different from other clients?">
+    Sn0w stands out because:
+    
+    - **5 years of private development** by top-tier players
+    - **Original exploits:** Holesnap timer, chorus manipulation, fast phasewalk (up/down), predict surround
+    - **Server bypasses:** Worked on 2b2t, Grim, 5b5t, 0b0t with full disablers
+    - **Crystal PVP focused:** Built specifically for crystal PVP meta
+    - **Unconventional design:** Features work differently than standard clients
+    
+    The developer's track record:
+    - First working doublemine for over 2 months
+    - Best Grim bypasses developed in under a month
+    - Ported from 1.12.2 to 1.21.1 in one month
+    - Used by top players for years in HVH
+  </Accordion>
+  
+  <Accordion title="Is this client safe to use?">
+    Safety considerations:
+    
+    **Code Safety:**
+    - Open source on GitHub
+    - Contains code from various sources (credited in README)
+    - MIT License
+    - Can be audited before building
+    
+    **Server Safety:**
+    - Using on non-anarchy servers will likely get you banned
+    - Even on anarchy servers, you may get kicked/banned
+    - Bypasses may be patched
+    - Use at your own risk
+    
+    **Stability:**
+    - Will crash
+    - May corrupt worlds (backup first)
+    - Not recommended for important servers/accounts
+  </Accordion>
+</AccordionGroup>
+
+## Getting Help
+
+If you need additional help:
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/Skitttyy/Sn0w/issues">
+    Report bugs and request critical fixes
+  </Card>
+  <Card title="Source Code" icon="code" href="https://github.com/Skitttyy/Sn0w">
+    View the source code and documentation
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Learn the basics of using Sn0w
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Installation and setup guide
+  </Card>
+</CardGroup>
+
+<Note>
+  Remember: This client is powerful but unconventional. Take time to learn it, expect crashes, and be patient with the learning curve.
+</Note>

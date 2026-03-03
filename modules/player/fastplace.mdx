@@ -1,0 +1,489 @@
+---
+title: FastPlace
+description: Use items and place blocks faster than vanilla allows
+icon: hand-pointer
+---
+
+## Overview
+
+FastPlace (implemented as FastUse) removes or reduces the delay between item uses, allowing you to place blocks, throw XP bottles, shoot bows, and use other items much faster than normally possible.
+
+## Features
+
+- Configurable delay override for any item
+- Fast block placement
+- Fast XP bottle throwing  
+- Fast end crystal placement
+- Fast bow shooting with charge time control
+- Fast crossbow loading
+- Ghost block fix option
+- Per-item-type toggles
+
+## Settings
+
+### Delay Settings
+
+<ParamField path="Delay" type="number" default="0">
+  Item use cooldown in ticks (0-10)
+  
+  - **0**: Instant placement (fastest but most detectable)
+  - **1-2**: Very fast (recommended for vanilla)
+  - **3-5**: Fast but safer for anti-cheat
+  - **6-10**: Slow but very safe
+</ParamField>
+
+### Item Type Toggles
+
+<ParamField path="Blocks" type="boolean" default="false">
+  Apply fast use to block items (cobblestone, obsidian, etc.)
+</ParamField>
+
+<ParamField path="XP" type="boolean" default="false">
+  Apply fast use to XP bottles
+</ParamField>
+
+<ParamField path="Crystals" type="boolean" default="false">
+  Apply fast use to end crystals
+</ParamField>
+
+<ParamField path="All" type="boolean" default="false">
+  Apply fast use to all items (overrides other toggles)
+</ParamField>
+
+### Advanced Settings
+
+<ParamField path="Ghost Fix" type="boolean" default="false">
+  Sends additional packets to prevent ghost blocks
+  
+  Enable if blocks appear placed but aren't actually there
+</ParamField>
+
+<ParamField path="Fast Bow" type="boolean" default="false">
+  Automatically releases bow after minimum charge time
+</ParamField>
+
+<ParamField path="Bow Delay" type="number" default="3">
+  Minimum bow charge time in ticks (3-25)
+  
+  Lower = faster but weaker arrows
+</ParamField>
+
+<ParamField path="Fast Crossbow" type="boolean" default="false">
+  Automatically loads crossbow at minimum charge time
+</ParamField>
+
+## How It Works
+
+<Steps>
+  <Step title="Cooldown Override">
+    FastPlace directly modifies the Minecraft client's item use cooldown timer:
+    
+    ```java
+    // Located at: player/FastUse.java:106-116
+    if (((IMinecraftClient) mc).getItemUseCooldown() > delay.getValue().floatValue() 
+        && check(mc.player.getMainHandStack().getItem())) {
+        ((IMinecraftClient) mc).setItemUseCooldown(delay.getValue().intValue());
+    }
+    ```
+  </Step>
+  
+  <Step title="Item Type Check">
+    Verifies the held item matches enabled settings:
+    
+    ```java
+    public boolean check(Item item) {
+        return (item instanceof BlockItem && blocks.getValue())
+            || (item == Items.END_CRYSTAL && crystals.getValue())
+            || (item == Items.EXPERIENCE_BOTTLE && xp.getValue())
+            || (all.getValue());
+    }
+    ```
+  </Step>
+  
+  <Step title="Ghost Fix (Optional)">
+    If enabled, sends additional placement packets to sync with server:
+    
+    ```java
+    if (ghostFix.getValue()) {
+        PacketManager.INSTANCE.sendPacket(id -> new PlayerInteractItemC2SPacket(
+            mc.player.getActiveHand(), id, 
+            RotationUtils.getActualYaw(), 
+            RotationUtils.getActualPitch()));
+    }
+    ```
+  </Step>
+</Steps>
+
+## Item-Specific Behavior
+
+<Tabs>
+  <Tab title="Blocks">
+    ### Fast Block Placement
+    
+    Overrides the 4-tick vanilla placement delay:
+    
+    **Vanilla:** 4 ticks between placements (~200ms)
+    **FastPlace (Delay: 0):** Instant placement
+    
+    **Best Settings:**
+    ```yaml
+    Blocks: true
+    Delay: 0-1  # Vanilla/lenient servers
+    Delay: 2-3  # Strict servers
+    Ghost Fix: true  # If blocks appear but aren't solid
+    ```
+    
+    <Info>
+    Combine with Scaffold for extremely fast bridging
+    </Info>
+  </Tab>
+  
+  <Tab title="Crystals">
+    ### Fast Crystal Placement
+    
+    Essential for PvP crystal combat:
+    
+    **Use Case:**
+    - Rapid crystal placement after breaking opponent's
+    - Faster crystal trades
+    - More crystals placed per second
+    
+    **Recommended Settings:**
+    ```yaml
+    Crystals: true
+    Delay: 0-1
+    Ghost Fix: false  # Usually not needed for crystals
+    ```
+    
+    <Warning>
+    Very low delay may cause crystals not to place due to server-side checks
+    </Warning>
+  </Tab>
+  
+  <Tab title="XP Bottles">
+    ### Fast XP Throwing
+    
+    Throw XP bottles rapidly:
+    
+    **Use Case:**
+    - Quick mending repairs mid-combat
+    - Fast XP distribution
+    - XP bombing areas
+    
+    **Settings:**
+    ```yaml
+    XP: true
+    Delay: 0
+    ```
+  </Tab>
+  
+  <Tab title="Bows">
+    ### Fast Bow
+    
+    Automatically releases bow after minimum charge:
+    
+    ```java
+    // Located at: player/FastUse.java:74-91
+    if (mainhand.getItem() == Items.BOW && bows.getValue()) {
+        if (mc.player.getItemUseTime() >= bowDelay.getValue().intValue()) {
+            PacketManager.INSTANCE.sendPacket(
+                new PlayerActionC2SPacket(
+                    PlayerActionC2SPacket.Action.RELEASE_USE_ITEM, 
+                    BlockPos.ORIGIN, Direction.DOWN));
+            mc.player.stopUsingItem();
+        }
+    }
+    ```
+    
+    **Bow Delay Reference:**
+    - **3 ticks**: Minimum for arrow to fire (weak)
+    - **5 ticks**: Medium charge
+    - **10 ticks**: Near full charge
+    - **20 ticks**: Full charge (max damage)
+    
+    **Best For:**
+    - Spam arrows at close range (Delay: 3-5)
+    - Balance of speed and damage (Delay: 8-12)
+  </Tab>
+  
+  <Tab title="Crossbows">
+    ### Fast Crossbow
+    
+    Auto-loads crossbow at minimum time:
+    
+    ```java
+    if (crossBow.getValue() && mainhand.getItem() == Items.CROSSBOW && 
+        mc.player.getItemUseTime() / (float) CrossbowItem.getPullTime(mc.player.getMainHandStack(), mc.player) > 1.0f) {
+        PacketManager.INSTANCE.sendPacket(
+            new PlayerActionC2SPacket(
+                PlayerActionC2SPacket.Action.RELEASE_USE_ITEM, 
+                BlockPos.ORIGIN, Direction.DOWN));
+        mc.player.stopUsingItem();
+        mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
+    }
+    ```
+    
+    **Effect:**
+    - Loads as soon as pull time completes
+    - No need to hold right-click
+    - Faster reload cycles
+  </Tab>
+</Tabs>
+
+## HUD Info Display
+
+FastPlace shows different info based on held item:
+
+```java
+// Located at: player/FastUse.java:127-145
+@Override
+public String getHudInfo() {
+    if (mainhand.getItem() == Items.BOW) {
+        if (mc.player.getActiveHand() != null) {
+            return mc.player.getItemUseTimeLeft() + "";  // Shows charge time
+        }
+    } else {
+        return ((IMinecraftClient) mc).getItemUseCooldown() + "";  // Shows cooldown
+    }
+    return "";
+}
+```
+
+**Display Examples:**
+- Blocks: `2` (2 ticks until next placement)
+- Bow charging: `8` (8 ticks charged)
+- Idle: `` (empty)
+
+## Configuration Presets
+
+<CodeGroup>
+```yaml Vanilla Fast Build
+Delay: 0
+Blocks: true
+XP: false
+Crystals: false
+All: false
+Ghost Fix: false
+Fast Bow: false
+Fast Crossbow: false
+
+→ Instant block placement
+→ Safe for vanilla servers
+→ No other items affected
+```
+
+```yaml PvP Crystal
+Delay: 1
+Blocks: false
+XP: false
+Crystals: true
+All: false
+Ghost Fix: false
+Fast Bow: true
+Bow Delay: 3
+Fast Crossbow: false
+
+→ Fast crystal placement
+→ Rapid bow shooting
+→ Combat-focused
+```
+
+```yaml Universal Fast Use
+Delay: 2
+Blocks: true
+XP: true
+Crystals: true
+All: false
+Ghost Fix: true
+Fast Bow: true
+Bow Delay: 5
+Fast Crossbow: true
+
+→ Fast use for all common items
+→ Ghost fix enabled
+→ Balanced bow charge
+```
+
+```yaml Anti-Cheat Safe
+Delay: 5
+Blocks: true
+XP: false
+Crystals: false
+All: false
+Ghost Fix: true
+Fast Bow: false
+Fast Crossbow: false
+
+→ Slower but safer
+→ Only affects blocks
+→ Ghost fix for reliability
+```
+</CodeGroup>
+
+## Technical Details
+
+### Cooldown System
+
+Minecraft uses a cooldown system for item usage:
+
+```java
+// IMinecraftClient accessor interface
+public interface IMinecraftClient {
+    int getItemUseCooldown();
+    void setItemUseCooldown(int cooldown);
+}
+```
+
+FastPlace directly manipulates this cooldown:
+- **Vanilla**: Cooldown starts at 4 ticks
+- **FastPlace**: Overrides to your configured delay
+- **Result**: Items can be used more frequently
+
+### Ghost Block Prevention
+
+Ghost blocks occur when:
+1. Client thinks block is placed
+2. Server rejects the placement
+3. Block appears but has no collision
+
+Ghost Fix sends additional packets to force sync:
+```java
+PlayerInteractItemC2SPacket(hand, sequenceId, yaw, pitch)
+```
+
+## Usage Examples
+
+<CodeGroup>
+```text Fast Bridging
+1. Enable FastPlace
+   - Delay: 0
+   - Blocks: true
+2. Enable Scaffold
+3. Sprint + Jump
+4. Blocks place instantly
+5. 2-3x faster bridging
+```
+
+```text Crystal PvP
+1. Enable FastPlace
+   - Delay: 1
+   - Crystals: true
+2. Enable CrystalAura
+3. Break and place crystals rapidly
+4. More crystals per second
+5. Win trades
+```
+
+```text Combat Mending
+1. Enable FastPlace
+   - Delay: 0
+   - XP: true
+2. Hold XP bottles
+3. Right-click spam
+4. Instant mending mid-fight
+```
+
+```text Bow Spam
+1. Enable FastPlace
+   - Fast Bow: true
+   - Bow Delay: 3
+2. Hold right-click with bow
+3. Auto-releases after 3 ticks
+4. Rapid arrow spam
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start Conservative" icon="gauge">
+    Begin with Delay: 3-5 and gradually decrease if no issues
+  </Card>
+  
+  <Card title="Test Ghost Blocks" icon="ghost">
+    Place blocks and walk into them. If you phase through, enable Ghost Fix
+  </Card>
+  
+  <Card title="Per-Item Configuration" icon="sliders">
+    Enable only the item types you need instead of using All
+  </Card>
+  
+  <Card title="Bow Timing" icon="bullseye">
+    Higher Bow Delay = more damage. Find your preferred balance
+  </Card>
+</CardGroup>
+
+## Compatibility Notes
+
+<Tabs>
+  <Tab title="Compatible">
+    <Check>Works with Scaffold for fast building</Check>
+    <Check>Works with CrystalAura for fast crystals</Check>
+    <Check>Compatible with most item types</Check>
+    <Check>Works in all game modes</Check>
+  </Tab>
+  
+  <Tab title="Anti-Cheat">
+    <Warning>Very low delays may trigger anti-cheat</Warning>
+    <Warning>Some servers limit placement speed server-side</Warning>
+    <Check>Delay 3-5 usually safe on most servers</Check>
+    <Info>Test in non-critical situations first</Info>
+  </Tab>
+  
+  <Tab title="Known Issues">
+    - Ghost blocks at Delay 0 on some servers (use Ghost Fix)
+    - Crystals may not place if too fast (increase delay)
+    - Bow auto-release can be jarring (adjust Bow Delay)
+  </Tab>
+</Tabs>
+
+<Warning>
+  Delay 0 on strict anti-cheat servers will likely get you kicked or flagged. Start with higher values and decrease carefully.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Ghost Blocks Appearing">
+    **Symptoms:** Blocks appear placed but you can walk through them
+    
+    **Solutions:**
+    1. Enable Ghost Fix
+    2. Increase Delay to 2-3
+    3. Disable other modules that send placement packets
+    4. Check server TPS (lag causes ghost blocks)
+  </Accordion>
+  
+  <Accordion title="Items Not Placing Faster">
+    **Check:**
+    1. Correct item type toggle is enabled
+    2. Delay is lower than vanilla (4 ticks)
+    3. You're actually holding the item
+    4. Module is enabled
+    
+    **Note:** Server-side rate limits may prevent faster placement
+  </Accordion>
+  
+  <Accordion title="Getting Kicked by Anti-Cheat">
+    **Solutions:**
+    1. Increase Delay to 5+
+    2. Disable Ghost Fix
+    3. Enable only specific item types (not All)
+    4. Use in combination with delay on other modules
+  </Accordion>
+  
+  <Accordion title="Bow Not Auto-Releasing">
+    **Check:**
+    1. Fast Bow is enabled
+    2. Bow Delay is set correctly (3-20)
+    3. You're holding a bow (not crossbow)
+    4. You're actually pulling the bow back
+  </Accordion>
+</AccordionGroup>
+
+## Related Modules
+
+- **Scaffold**: Combine for extremely fast bridging
+- **CrystalAura**: Use with fast crystals for better PvP
+- **AutoTool**: Fast tool switching for mining
+- **MultiTask**: Use items while doing other actions

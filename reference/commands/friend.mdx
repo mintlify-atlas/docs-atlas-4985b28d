@@ -1,0 +1,146 @@
+---
+title: Friend Command  
+description: Manage your friends list
+---
+
+The `friend` command allows you to add and remove players from your friends list. Friended players are typically highlighted differently in the client and excluded from certain combat modules.
+
+## Syntax
+
+```
+.friend <action> <player>
+```
+
+<ParamField path="action" type="string" required>
+  The action to perform: `add` to add a friend, or `del` to remove a friend.
+</ParamField>
+
+<ParamField path="player" type="string" required>
+  The in-game name (IGN) of the player to add or remove.
+</ParamField>
+
+## Actions
+
+### Add Friend
+
+Add a player to your friends list:
+
+```
+.friend add <player>
+```
+
+Once added, the player will be recognized as a friend by the client, and various modules will treat them accordingly (e.g., combat modules won't target them).
+
+**Example:**
+```
+.friend add Notch
+.friend add Steve
+.friend add Alex
+```
+
+### Remove Friend
+
+Remove a player from your friends list:
+
+```
+.friend del <player>
+```
+
+The player will no longer be recognized as a friend and will be treated as a normal player.
+
+**Example:**
+```
+.friend del Notch
+.friend del Steve
+```
+
+## Examples
+
+### Managing Your Friends List
+
+Add multiple friends:
+```
+.friend add Player1
+.friend add Player2  
+.friend add Player3
+```
+
+Remove a friend who is no longer trusted:
+```
+.friend del Player2
+```
+
+### Team Gameplay
+
+Before starting a team fight, add your teammates:
+```
+.friend add Teammate1
+.friend add Teammate2
+.friend add Teammate3
+```
+
+After the fight, remove them if needed:
+```
+.friend del Teammate1
+.friend del Teammate2
+.friend del Teammate3
+```
+
+## Features
+
+### Auto-complete Support
+
+The friend command includes intelligent auto-complete:
+
+- When using `add`, it suggests players who are **not** currently friends
+- When using `del`, it suggests players who **are** currently friends
+- This helps prevent accidentally adding duplicate friends or trying to remove non-existent friends
+
+### Case-Insensitive Matching
+
+Player names are compared case-insensitively, so:
+
+```
+.friend add NOTCH
+.friend del notch
+```
+
+Both commands will work correctly regardless of capitalization.
+
+## Usage Notes
+
+- Player names should be the exact in-game name (IGN)
+- Friends are persisted across client restarts
+- Adding a player who is already a friend will create a duplicate entry (use `del` to remove if needed)
+- Removing a non-existent friend will not produce an error
+- Invalid command format will display "Invalid format" message
+
+## Friend Benefits
+
+### Combat Modules
+
+Friended players are typically excluded from targeting in:
+- KillAura/Aura modules
+- AutoTotem priority calculations
+- Crystal Aura targeting
+- Other offensive modules
+
+### Visual Indicators
+
+Friends may be displayed with:
+- Different name colors in ESP
+- Special markers or highlights
+- Distinct tracers
+
+### Protection
+
+Friends are protected from:
+- Accidental targeting
+- Griefing modules
+- Automated actions that could harm them
+
+## Related Features
+
+- Friend list is managed through `FriendManager`
+- Friends are stored as `Friend` objects with their IGN
+- The list persists in the client's data files

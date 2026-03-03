@@ -1,0 +1,197 @@
+---
+title: Waypoint Command
+description: Create and manage waypoints in the world
+---
+
+The `waypoint` command allows you to create and manage waypoints at specific coordinates in the Minecraft world. Waypoints help you mark important locations and navigate back to them later.
+
+## Syntax
+
+```
+.waypoint <action> <name> [x] [y] [z]
+```
+
+<ParamField path="action" type="string" required>
+  The action to perform: `create` to add a new waypoint, or `remove` to delete an existing waypoint.
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  The name of the waypoint. This is used to identify the waypoint.
+</ParamField>
+
+<ParamField path="x" type="integer">
+  The X coordinate (optional for create at current position, required for specific coordinates).
+</ParamField>
+
+<ParamField path="y" type="integer">
+  The Y coordinate (optional for create at current position, required for specific coordinates).
+</ParamField>
+
+<ParamField path="z" type="integer">
+  The Z coordinate (optional for create at current position, required for specific coordinates).
+</ParamField>
+
+## Actions
+
+### Create Waypoint at Current Position
+
+Create a waypoint at your current location:
+
+```
+.waypoint create <name>
+```
+
+This automatically captures your current X, Y, and Z coordinates, along with the server/world and dimension you're in.
+
+**Example:**
+```
+.waypoint create base
+.waypoint create portal
+.waypoint create farm
+```
+
+### Create Waypoint at Specific Coordinates
+
+Create a waypoint at specific coordinates:
+
+```
+.waypoint create <name> <x> <y> <z>
+```
+
+**Example:**
+```
+.waypoint create stronghold 1000 64 -2000
+.waypoint create endportal 5000 20 3000
+.waypoint create dungeon -500 40 800
+```
+
+### Remove Waypoint
+
+Delete an existing waypoint by name:
+
+```
+.waypoint remove <name>
+```
+
+**Example:**
+```
+.waypoint remove oldbase
+.waypoint remove temp
+```
+
+## Examples
+
+### Basic Usage
+
+Create a waypoint at your current position:
+```
+.waypoint create MyBase
+```
+
+Response: "Created waypoint MyBase at X: 100 Y: 64 Z: -200"
+
+### Marking Important Locations
+
+Mark your main base:
+```
+.waypoint create MainBase
+```
+
+Mark a nether portal location:
+```
+.waypoint create NetherHub 0 64 0
+```
+
+Mark a friend's base with specific coordinates:
+```
+.waypoint create FriendBase 5000 70 -3000
+```
+
+### Managing Waypoints
+
+Create multiple waypoints:
+```
+.waypoint create Base
+.waypoint create Farm
+.waypoint create Mine
+.waypoint create Portal
+```
+
+Remove an old waypoint:
+```
+.waypoint remove OldMine
+```
+
+### Coordinate Sharing
+
+If a friend shares coordinates with you, create a waypoint:
+```
+.waypoint create TradingPost 10000 65 8000
+```
+
+## Waypoint Storage
+
+Waypoints are stored with the following information:
+
+- **Name**: The identifier you provide
+- **Coordinates**: X, Y, Z position in the world
+- **Server**: The server address (or "SinglePlayer" for single-player worlds)
+- **Dimension**: The dimension (overworld, nether, end)
+
+This means waypoints are organized by server and dimension, allowing you to have the same waypoint name across different servers or dimensions without conflicts.
+
+## Auto-complete Support
+
+The waypoint command includes auto-complete functionality:
+
+- When typing `create`, it suggests the parameter format: `name x y z`
+- When typing `remove`, it suggests existing waypoint names from the `{WAYPOINTS}` list
+
+## Usage Notes
+
+- Waypoint names are case-sensitive
+- When creating at specific coordinates, all three coordinates (X, Y, Z) must be provided
+- Coordinates are stored as integers (whole numbers)
+- If coordinates are invalid or cannot be parsed, you'll receive a red error message: "Invalid waypoint!"
+- Waypoints are dimension-specific and server-specific
+- Removing a waypoint that doesn't exist will not produce an error
+- Invalid command format displays "Invalid format"
+
+## Waypoint Features
+
+### Persistence
+
+Waypoints are saved to the client's configuration and persist across:
+- Client restarts
+- World changes
+- Server disconnects
+
+### Multi-Server Support
+
+Waypoints are tracked per server, so you can have:
+- Different waypoints for different servers
+- Same waypoint names on different servers without conflicts
+
+### Dimension Awareness
+
+Waypoints remember which dimension they were created in:
+- Overworld waypoints
+- Nether waypoints  
+- End waypoints
+
+This helps you organize locations across dimensions.
+
+## Integration with Other Features
+
+Waypoints can typically be:
+- Displayed on the in-game HUD
+- Shown in a waypoint list
+- Used for navigation and pathfinding
+- Integrated with ESP or rendering modules
+
+## Related Commands
+
+Waypoints integrate with the broader Sn0w client system and may be visible or usable in:
+- ESP modules
+- HUD waypoint displays
+- Navigation features

@@ -1,0 +1,262 @@
+---
+title: AutoReplenish
+description: Automatically refills items in your hotbar when they run low
+icon: box
+---
+
+## Overview
+
+AutoReplenish automatically refills items in your hotbar when they run low or run out. It maintains your hotbar layout by restacking items and replacing empty slots with matching items from your inventory.
+
+## Features
+
+- Two operating modes: percentage-based and slot-memory
+- Configurable refill delay to avoid detection
+- Smart item matching by name and type
+- Automatic stack merging
+- Works with inventory screens
+
+## Settings
+
+<ParamField path="Percent" type="number" default="32">
+  Percentage threshold for refilling items (0-100)
+  
+  - **0**: Memory mode - remembers what was in each slot
+  - **1-100**: Refills when item count drops below this percentage
+</ParamField>
+
+<ParamField path="Delay" type="number" default="200">
+  Delay between refill actions in milliseconds (0-500ms)
+  
+  Higher delays are safer for anti-cheat but slower to refill
+</ParamField>
+
+## Operating Modes
+
+<Tabs>
+  <Tab title="Percentage Mode (Default)">
+    ### How It Works
+    
+    When `Percent` is set to 1-100:
+    1. Monitors all hotbar slots continuously
+    2. When an item drops below the threshold percentage
+    3. Searches inventory for matching items
+    4. Merges stacks to refill the hotbar slot
+    
+    ### Best For
+    - Building with blocks
+    - Eating food
+    - Throwing projectiles
+    - Any stackable items
+    
+    ### Example
+    ```text
+    Percent: 32 (32% threshold)
+    Hotbar Slot 1: 20/64 Cobblestone (31.25%)
+    → Triggers refill from inventory
+    → Merges with inventory stack
+    → Result: 64/64 Cobblestone
+    ```
+  </Tab>
+  
+  <Tab title="Memory Mode">
+    ### How It Works
+    
+    When `Percent` is set to 0:
+    1. Remembers what item was in each hotbar slot
+    2. When a slot becomes empty
+    3. Searches inventory for the same item type
+    4. Moves a new stack to that slot
+    
+    ### Best For
+    - PvP combat (replacing used crystals, totems)
+    - Keeping specific tools in specific slots
+    - Maintaining consistent hotbar layout
+    
+    ### Example
+    ```text
+    Initial: Slot 1 = Diamond Sword
+    After use: Slot 1 = Empty (sword broke)
+    → Searches inventory for Diamond Sword
+    → Moves new sword to Slot 1
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration Guide
+
+<Steps>
+  <Step title="Choose Your Mode">
+    - Set `Percent` to 0 for memory mode
+    - Set `Percent` to 5-50 for percentage mode (recommended: 32)
+  </Step>
+  
+  <Step title="Adjust Delay">
+    - Low delay (50-100ms): Fast but detectable
+    - Medium delay (200-300ms): Balanced (recommended)
+    - High delay (400-500ms): Safe but slower
+  </Step>
+  
+  <Step title="Test It Out">
+    Place items in your hotbar and use them to see the refill behavior
+  </Step>
+</Steps>
+
+## Technical Details
+
+### Memory Mode Logic
+
+```java
+// Located at: misc/AutoReplenish.java:51-98
+if (percent.getValue().intValue() == 0) {
+    // Cache current hotbar state when in inventory
+    if (mc.currentScreen != null) {
+        for (int i = 0; i < 9; i++) {
+            cache[i] = mc.player.getInventory().getStack(i).getItem();
+        }
+        return;
+    }
+    
+    // Refill empty slots with cached items
+    if (timer.isPassed()) {
+        for (Item item : cache) {
+            if (item != null && !item.equals(Items.AIR)) {
+                if (mc.player.getInventory().getStack(index).isEmpty()) {
+                    int slot = getSlot(item);
+                    if (slot != -1) {
+                        InventoryUtils.moveItem(slot, index);
+                        timer.resetDelay();
+                        return;
+                    }
+                }
+            }
+            index++;
+        }
+    }
+}
+```
+
+### Percentage Mode Logic
+
+```java
+// Located at: misc/AutoReplenish.java:98-118
+if (timer.isPassed()) {
+    for (int i = 0; i < 9; i++) {
+        ItemStack stack = mc.player.getInventory().getStack(i);
+        if (stack.isEmpty() || !stack.isStackable()) continue;
+        
+        double stackPercent = ((float) stack.getCount() / stack.getMaxCount()) * 100.0f;
+        if (stack.getCount() == 1 || stackPercent <= Math.max(percent.getValue().floatValue(), 5.0f)) {
+            if (replenishStack(stack, i)) return;
+        }
+    }
+}
+```
+
+## Usage Examples
+
+<CodeGroup>
+```text Building Scenario
+Setup:
+- Percent: 32
+- Delay: 200
+- Hotbar: 64 Stone in Slot 1
+- Inventory: 5 stacks of Stone
+
+Behavior:
+1. Place blocks until stack reaches 20/64 (31%)
+2. AutoReplenish triggers
+3. Merges with inventory stack
+4. Back to 64/64, continue building
+```
+
+```text PvP Combat
+Setup:
+- Percent: 0 (Memory Mode)
+- Delay: 150
+- Hotbar Layout:
+  Slot 1: Sword
+  Slot 2: Crystals
+  Slot 3: Gaps
+
+Behavior:
+1. Use all crystals in Slot 2
+2. AutoReplenish finds more crystals
+3. Moves them to Slot 2
+4. Maintains muscle memory layout
+```
+
+```text Food Management
+Setup:
+- Percent: 50
+- Delay: 300
+- Hotbar: Golden Apples
+
+Behavior:
+1. Eat apples until stack is half empty
+2. AutoReplenish searches inventory
+3. Merges stacks to keep hotbar full
+```
+</CodeGroup>
+
+## Smart Item Matching
+
+AutoReplenish uses multiple checks to ensure correct item matching:
+
+<AccordionGroup>
+  <Accordion title="Name Matching">
+    Compares item display names to ensure exact matches
+    ```java
+    if (!stack.getName().equals(item.getName())) continue;
+    ```
+  </Accordion>
+  
+  <Accordion title="Block Type Check">
+    For blocks, verifies the block type matches
+    ```java
+    if (stack.getItem() instanceof BlockItem blockItem && 
+        blockItem.getBlock() != blockItem1.getBlock()) continue;
+    ```
+  </Accordion>
+  
+  <Accordion title="Item Type Check">
+    Final verification that item types match
+    ```java
+    if (stack.getItem() != item.getItem()) continue;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Organize Inventory" icon="layer-group">
+    Keep multiple stacks of frequently used items in your inventory for seamless refilling
+  </Card>
+  
+  <Card title="Use Memory Mode for PvP" icon="brain">
+    Memory mode (Percent: 0) maintains consistent hotbar layout crucial for muscle memory
+  </Card>
+  
+  <Card title="Adjust Delay for Server" icon="clock">
+    Increase delay on strict anti-cheat servers to avoid detection
+  </Card>
+  
+  <Card title="Test Before Combat" icon="vial">
+    Test your configuration in a safe area before entering combat situations
+  </Card>
+</CardGroup>
+
+## Compatibility Notes
+
+<Check>Works while inventory screen is open (Percentage Mode)</Check>
+<Check>Compatible with all stackable items</Check>
+<Check>Supports custom item names and NBT data</Check>
+<Warning>May not work with some inventory management mods</Warning>
+<Warning>Some servers may detect rapid inventory clicks</Warning>
+
+## Related Modules
+
+- **AutoTool**: Automatically switches to the best tool
+- **MiddleClick**: Quick inventory management with middle mouse
+- **XCarry**: Extended crafting grid inventory

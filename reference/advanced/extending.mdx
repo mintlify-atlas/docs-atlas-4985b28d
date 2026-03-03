@@ -1,0 +1,718 @@
+---
+title: Extending Sn0w
+description: Complete guide to creating custom modules and extending the client
+---
+
+## Overview
+
+This guide covers how to extend Sn0w with custom modules, from basic functionality to advanced features. You'll learn to create modules that integrate seamlessly with the client's architecture.
+
+## Prerequisites
+
+**Required Knowledge:**
+- Java programming
+- Minecraft modding basics (mixins, Minecraft API)
+- Understanding of the [Event System](/reference/advanced/event-system)
+- Familiarity with the [Module API](/reference/advanced/module-api)
+
+**Development Environment:**
+- IntelliJ IDEA or Eclipse
+- Minecraft development workspace set up
+- Sn0w source code
+
+## Creating Your First Module
+
+### Step 1: Create Module Class
+
+Create a new Java class in the appropriate category package:
+
+```java
+package me.skitttyy.kami.impl.features.modules.misc;
+
+import me.skitttyy.kami.api.event.eventbus.SubscribeEvent;
+import me.skitttyy.kami.api.event.events.TickEvent;
+import me.skitttyy.kami.api.feature.module.Module;
+import me.skitttyy.kami.api.utils.NullUtils;
+import me.skitttyy.kami.api.utils.chat.ChatUtils;
+
+public class AutoGreet extends Module {
+    
+    public AutoGreet() {
+        super("AutoGreet", Category.Misc);
+    }
+    
+    @Override
+    public void onEnable() {
+        super.onEnable();
+        if (!NullUtils.nullCheck()) {
+            ChatUtils.sendMessage("AutoGreet enabled!");
+        }
+    }
+    
+    @Override
+    public String getDescription() {
+        return "AutoGreet: Automatically greets players";
+    }
+}
+```
+
+### Step 2: Add Module Logic
+
+```java
+import me.skitttyy.kami.api.event.events.network.PacketEvent;
+import me.skitttyy.kami.api.value.Value;
+import me.skitttyy.kami.api.value.builder.ValueBuilder;
+import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+
+public class AutoGreet extends Module {
+    
+    private Value<String> message = new ValueBuilder<String>()
+        .withDescriptor("Message")
+        .withValue("Hello {player}!")
+        .register(this);
+    
+    private Value<Integer> delay = new ValueBuilder<Integer>()
+        .withDescriptor("Delay (ms)")
+        .withValue(1000)
+        .withRange(0, 5000)
+        .register(this);
+    
+    private final Set<String> greetedPlayers = new HashSet<>();
+    
+    public AutoGreet() {
+        super("AutoGreet", Category.Misc);
+    }
+    
+    @SubscribeEvent
+    public void onPacket(PacketEvent.Receive event) {
+        if (NullUtils.nullCheck()) return;
+        
+        if (event.getPacket() instanceof PlayerListS2CPacket packet) {
+            for (PlayerListS2CPacket.Entry entry : packet.getEntries()) {
+                if (packet.getAction() == PlayerListS2CPacket.Action.ADD_PLAYER) {
+                    String playerName = entry.getProfile().getName();
+                    
+                    if (!greetedPlayers.contains(playerName)) {
+                        scheduleGreeting(playerName);
+                        greetedPlayers.add(playerName);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void scheduleGreeting(String playerName) {
+        new Thread(() -> {
+            try {
+                Thread.sleep(delay.getValue());
+                String msg = message.getValue().replace("{player}", playerName);
+                mc.player.networkHandler.sendChatMessage(msg);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
+    @Override
+    public void onDisable() {
+        super.onDisable();
+        greetedPlayers.clear();
+    }
+}
+```
+
+### Step 3: Register Module
+
+Add your module to the module manager:
+
+```java
+public class ModuleManager {
+    public void init() {
+        // ... other modules
+        modules.add(new AutoGreet());
+    }
+}
+```
+
+## Advanced Module Patterns
+
+### Pattern 1: Rotation Module
+
+Modules that need to control player rotation:
+
+```java
+public class KillAura extends Module {
+    
+    private Value<Boolean> rotate = new ValueBuilder<Boolean>()
+        .withDescriptor("Rotate")
+        .withValue(true)
+        .register(this);
+    
+    private Value<Double> range = new ValueBuilder<Double>()
+        .withDescriptor("Range")
+        .withValue(4.5)
+        .withRange(1.0, 6.0)
+        .register(this);
+    
+    private Entity target;
+    
+    @SubscribeEvent
+    public void onTick(TickEvent.ClientTickEvent event) {
+        if (NullUtils.nullCheck()) return;
+        
+        target = findTarget();
+        
+        if (target != null && rotate.getValue()) {
+            float[] rotations = RotationUtils.getRotations(target);
+            RotationUtils.setRotation(rotations, 2);
+        }
+    }
+    
+    private Entity findTarget() {
+        return mc.world.getEntities().stream()
+            .filter(e -> e instanceof PlayerEntity)
+            .filter(e -> e != mc.player)
+            .filter(e -> mc.player.distanceTo(e) <= range.getValue())
+            .min(Comparator.comparingDouble(e -> mc.player.distanceTo(e)))
+            .orElse(null);
+    }
+}
+```
+
+### Pattern 2: Render Module
+
+Modules that render custom elements:
+
+```java
+public class PlayerESP extends Module {
+    
+    private Value<Boolean> box = new ValueBuilder<Boolean>()
+        .withDescriptor("Box")
+        .withValue(true)
+        .register(this);
+    
+    private Value<Sn0wColor> color = new ValueBuilder<Sn0wColor>()
+        .withDescriptor("Color")
+        .withValue(new Sn0wColor(Color.RED, false))
+        .register(this);
+    
+    public PlayerESP() {
+        super("PlayerESP", Category.Render);
+    }
+    
+    @SubscribeEvent
+    public void onRenderWorld(RenderWorldEvent event) {
+        if (NullUtils.nullCheck()) return;
+        
+        MatrixStack matrices = event.getMatrices();
+        float tickDelta = event.getTickDelta();
+        
+        for (Entity entity : mc.world.getEntities()) {
+            if (entity instanceof PlayerEntity && entity != mc.player) {
+                if (box.getValue()) {
+                    renderBox(matrices, entity, tickDelta);
+                }
+            }
+        }
+    }
+    
+    private void renderBox(MatrixStack matrices, Entity entity, float tickDelta) {
+        Box box = entity.getBoundingBox();
+        Color c = color.getValue().getColor();
+        
+        RenderUtils.drawBoxOutline(
+            matrices,
+            box,
+            c.getRed() / 255f,
+            c.getGreen() / 255f,
+            c.getBlue() / 255f,
+            c.getAlpha() / 255f
+        );
+    }
+}
+```
+
+### Pattern 3: Packet Manipulation Module
+
+Modules that modify or cancel packets:
+
+```java
+public class AntiKnockback extends Module {
+    
+    private Value<Double> horizontal = new ValueBuilder<Double>()
+        .withDescriptor("Horizontal")
+        .withValue(0.0)
+        .withRange(0.0, 100.0)
+        .register(this);
+    
+    private Value<Double> vertical = new ValueBuilder<Double>()
+        .withDescriptor("Vertical")
+        .withValue(0.0)
+        .withRange(0.0, 100.0)
+        .register(this);
+    
+    public AntiKnockback() {
+        super("AntiKnockback", Category.Combat);
+    }
+    
+    @SubscribeEvent
+    public void onPacket(PacketEvent.Receive event) {
+        if (event.getPacket() instanceof EntityVelocityUpdateS2CPacket packet) {
+            if (packet.getEntityId() == mc.player.getId()) {
+                // Cancel or modify the packet
+                if (horizontal.getValue() == 0.0 && vertical.getValue() == 0.0) {
+                    event.setCancelled(true);
+                } else {
+                    // Modify velocity in mixin
+                }
+            }
+        }
+    }
+}
+```
+
+### Pattern 4: Timer-Based Module
+
+Modules that execute actions on a timer:
+
+```java
+public class AutoTotem extends Module {
+    
+    private Value<Integer> delay = new ValueBuilder<Integer>()
+        .withDescriptor("Delay")
+        .withValue(50)
+        .withRange(0, 500)
+        .register(this);
+    
+    private final Timer timer = new Timer();
+    
+    public AutoTotem() {
+        super("AutoTotem", Category.Combat);
+    }
+    
+    @SubscribeEvent
+    public void onTick(TickEvent.ClientTickEvent event) {
+        if (NullUtils.nullCheck()) return;
+        
+        if (!timer.hasElapsed(delay.getValue())) return;
+        
+        if (mc.player.getOffHandStack().getItem() != Items.TOTEM_OF_UNDYING) {
+            equipTotem();
+        }
+        
+        timer.reset();
+    }
+    
+    private void equipTotem() {
+        // Find totem in inventory
+        int totemSlot = findTotemSlot();
+        
+        if (totemSlot != -1) {
+            // Swap to offhand
+            mc.interactionManager.clickSlot(
+                mc.player.currentScreenHandler.syncId,
+                totemSlot,
+                0,
+                SlotActionType.PICKUP,
+                mc.player
+            );
+            // Click offhand slot (45)
+            mc.interactionManager.clickSlot(
+                mc.player.currentScreenHandler.syncId,
+                45,
+                0,
+                SlotActionType.PICKUP,
+                mc.player
+            );
+        }
+    }
+    
+    private int findTotemSlot() {
+        for (int i = 0; i < 36; i++) {
+            ItemStack stack = mc.player.getInventory().getStack(i);
+            if (stack.getItem() == Items.TOTEM_OF_UNDYING) {
+                return i < 9 ? i + 36 : i;
+            }
+        }
+        return -1;
+    }
+    
+    @Override
+    public void onDisable() {
+        super.onDisable();
+        timer.reset();
+    }
+}
+```
+
+## Creating Custom Events
+
+### Step 1: Define Event Class
+
+```java
+package me.skitttyy.kami.api.event.events.custom;
+
+import lombok.Getter;
+import me.skitttyy.kami.api.event.Event;
+import net.minecraft.util.math.BlockPos;
+
+@Getter
+public class BlockBreakEvent extends Event {
+    private final BlockPos pos;
+    private final int progress;
+    
+    public BlockBreakEvent(BlockPos pos, int progress) {
+        this.pos = pos;
+        this.progress = progress;
+    }
+}
+```
+
+### Step 2: Create Mixin to Post Event
+
+```java
+package me.skitttyy.kami.mixin;
+
+import me.skitttyy.kami.api.event.events.custom.BlockBreakEvent;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
+import net.minecraft.util.math.BlockPos;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin(ClientPlayerInteractionManager.class)
+public class MixinClientPlayerInteractionManager {
+    
+    @Inject(method = "updateBlockBreakingProgress", at = @At("HEAD"))
+    private void onBlockBreak(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        // Post event
+        BlockBreakEvent event = new BlockBreakEvent(pos, 0);
+        event.post();
+        
+        // Can cancel the action
+        if (event.isCancelled()) {
+            cir.setReturnValue(false);
+        }
+    }
+}
+```
+
+### Step 3: Use Event in Module
+
+```java
+public class BlockBreakLogger extends Module {
+    
+    public BlockBreakLogger() {
+        super("BlockBreakLogger", Category.Misc);
+    }
+    
+    @SubscribeEvent
+    public void onBlockBreak(BlockBreakEvent event) {
+        BlockPos pos = event.getPos();
+        int progress = event.getProgress();
+        
+        ChatUtils.sendMessage(String.format(
+            "Breaking block at %d, %d, %d (progress: %d%%)",
+            pos.getX(), pos.getY(), pos.getZ(), progress
+        ));
+    }
+}
+```
+
+## Module Communication
+
+### Accessing Other Modules
+
+```java
+public class MyModule extends Module {
+    
+    @SubscribeEvent
+    public void onTick(TickEvent.ClientTickEvent event) {
+        // Check if another module is enabled
+        if (Sprint.INSTANCE.isEnabled()) {
+            // Access the other module's values
+            String sprintMode = Sprint.INSTANCE.mode.getValue();
+            
+            if (sprintMode.equals("Rage")) {
+                // Adjust behavior
+            }
+        }
+    }
+}
+```
+
+### Creating Module Dependencies
+
+```java
+public class AdvancedModule extends Module {
+    
+    @Override
+    public void onEnable() {
+        super.onEnable();
+        
+        // Require another module to be enabled
+        if (!RequiredModule.INSTANCE.isEnabled()) {
+            ChatUtils.sendMessage("This module requires RequiredModule!");
+            this.setEnabled(false);
+            return;
+        }
+    }
+}
+```
+
+## Best Practices
+
+### 1. Null Safety
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    // ALWAYS check
+    if (NullUtils.nullCheck()) return;
+    
+    // Safe to use mc.player, mc.world
+}
+```
+
+### 2. Resource Cleanup
+
+```java
+private final List<Entity> trackedEntities = new ArrayList<>();
+private Timer timer;
+
+@Override
+public void onDisable() {
+    super.onDisable();
+    
+    // Clear collections
+    trackedEntities.clear();
+    
+    // Reset timers
+    if (timer != null) {
+        timer.reset();
+    }
+    
+    // Remove effects
+    if (!NullUtils.nullCheck()) {
+        mc.player.removeStatusEffect(StatusEffects.SPEED);
+    }
+}
+```
+
+### 3. Thread Safety
+
+```java
+// Use concurrent collections for multi-threaded access
+private final ConcurrentHashMap<UUID, PlayerData> playerData = new ConcurrentHashMap<>();
+
+// Synchronize access to shared state
+private final Object lock = new Object();
+
+private void updateData() {
+    synchronized (lock) {
+        // Modify shared state
+    }
+}
+```
+
+### 4. Performance Optimization
+
+```java
+// Cache expensive computations
+private List<Entity> cachedEntities;
+private int ticksSinceUpdate = 0;
+
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (++ticksSinceUpdate >= 20) { // Update every second
+        cachedEntities = findTargets();
+        ticksSinceUpdate = 0;
+    }
+    
+    // Use cached data
+    processEntities(cachedEntities);
+}
+```
+
+### 5. Value Validation
+
+```java
+private Value<Double> range = new ValueBuilder<Double>()
+    .withDescriptor("Range")
+    .withValue(4.0)
+    .withRange(1.0, 6.0) // Enforce limits
+    .register(this);
+
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    double rangeValue = Math.max(1.0, Math.min(6.0, range.getValue()));
+    // Extra validation if needed
+}
+```
+
+### 6. Error Handling
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    try {
+        // Risky operation
+        performComplexTask();
+    } catch (Exception e) {
+        ChatUtils.sendMessage("Error in module: " + e.getMessage());
+        e.printStackTrace();
+        
+        // Optionally disable module on critical errors
+        this.setEnabled(false);
+    }
+}
+```
+
+## Testing Your Module
+
+### Unit Testing
+
+```java
+public class AutoGreetTest {
+    
+    @Test
+    public void testMessageFormatting() {
+        String template = "Hello {player}!";
+        String result = template.replace("{player}", "Steve");
+        
+        assertEquals("Hello Steve!", result);
+    }
+    
+    @Test
+    public void testModuleCreation() {
+        AutoGreet module = new AutoGreet();
+        
+        assertNotNull(module);
+        assertEquals("AutoGreet", module.getName());
+        assertEquals(Category.Misc, module.getCategory());
+    }
+}
+```
+
+### In-Game Testing
+
+1. Build the client with your module
+2. Launch Minecraft
+3. Open the client GUI
+4. Enable your module
+5. Test all features and edge cases
+6. Check console for errors
+
+## Common Issues
+
+### Issue 1: Module Not Appearing
+
+**Solution:** Ensure module is registered in ModuleManager:
+
+```java
+public class ModuleManager {
+    public void init() {
+        modules.add(new YourModule()); // Add this line
+    }
+}
+```
+
+### Issue 2: Events Not Firing
+
+**Solution:** Verify `super.onEnable()` is called:
+
+```java
+@Override
+public void onEnable() {
+    super.onEnable(); // REQUIRED for event registration
+    // Your code
+}
+```
+
+### Issue 3: Values Not Saving
+
+**Solution:** Ensure values are registered:
+
+```java
+private Value<Boolean> setting = new ValueBuilder<Boolean>()
+    .withValue(true)
+    .register(this); // REQUIRED
+```
+
+### Issue 4: NullPointerException
+
+**Solution:** Always check for null:
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (NullUtils.nullCheck()) return; // Add this
+    
+    mc.player.setSprinting(true);
+}
+```
+
+## Advanced Topics
+
+### Custom Value Types
+
+Create custom value types for complex settings:
+
+```java
+public class RotationValue extends Value<Rotation> {
+    // Custom value implementation
+}
+```
+
+### Module Presets
+
+Implement preset system for quick configuration:
+
+```java
+public void loadPreset(String presetName) {
+    switch (presetName) {
+        case "Legit" -> {
+            range.setValue(3.5);
+            rotate.setValue(true);
+        }
+        case "Rage" -> {
+            range.setValue(6.0);
+            rotate.setValue(false);
+        }
+    }
+}
+```
+
+### Integration with Config System
+
+Manually save/load custom data:
+
+```java
+@Override
+public Map<String, Object> save() {
+    Map<String, Object> data = super.save();
+    data.put("customData", myCustomData);
+    return data;
+}
+
+@Override
+public void load(Map<String, Object> objects) {
+    super.load(objects);
+    if (objects.containsKey("customData")) {
+        myCustomData = (String) objects.get("customData");
+    }
+}
+```
+
+## Related Documentation
+
+- [Event System Reference](/reference/advanced/event-system)
+- [Module API Reference](/reference/advanced/module-api)
+
+## Example Modules in Source
+
+- Simple module: `impl/features/modules/render/FullBright.java:14`
+- Complex module: `impl/features/modules/movement/Sprint.java:14`
+- Combat module: `impl/features/modules/combat/KillAura.java`
+- Render module: `impl/features/modules/render/ESP.java`

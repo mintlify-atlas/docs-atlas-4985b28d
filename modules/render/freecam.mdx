@@ -1,0 +1,306 @@
+---
+title: Freecam
+description: Detach your camera from your player for spectator-like perspective
+---
+
+Freecam allows you to move your camera independently from your player character, providing a spectator-like perspective while your player remains stationary.
+
+## Controls
+
+Freecam uses standard movement controls:
+
+- **W/A/S/D** - Move camera horizontally
+- **Space** - Ascend camera
+- **Shift** - Descend camera  
+- **Sprint** - Double movement speed
+- **Mouse** - Look around
+
+<Info>
+Movement keys are captured by freecam and won't move your actual player. Your player entity remains in place while the camera moves freely.
+</Info>
+
+## Configuration
+
+### Speed Settings
+
+**Speed**
+- Horizontal movement speed (0.1-4.0)
+- Default: 1.0
+- Affected by sprint multiplier (2x when sprinting)
+
+**Vertical Speed**  
+- Up/down movement speed (0.1-2.0)
+- Default: 0.5
+- Independent from horizontal speed
+
+```java
+// Sprint doubles base speed
+double s = mc.options.sprintKey.isPressed() ? 1.0 : 0.5;
+velX += forward.x * s * speed.getValue();
+velY += s * vertical.getValue();
+```
+
+Source: `Freecam.java:172-211`
+
+### Rotate
+
+When enabled, your player will rotate to face your crosshair target when you interact:
+- Triggers on attack or use key press
+- Rotates player to crosshair position  
+- Useful for interacting with blocks/entities while in freecam
+
+```java
+if (rotate.getValue() && mc.crosshairTarget != null) {
+  RotationUtils.setRotation(
+    RotationUtils.getRotationsTo(
+      mc.player.getEyePos(), 
+      mc.crosshairTarget.getPos()
+    )
+  );
+}
+```
+
+Source: `Freecam.java:152-155`
+
+## Camera Mechanics
+
+### Position Tracking
+
+Freecam maintains separate position state:
+
+```java
+public final Vector3d pos = new Vector3d();      // Current position
+public final Vector3d prevPos = new Vector3d();  // Previous tick position
+
+public float yaw, pitch;          // Current rotation
+public float prevYaw, prevPitch;  // Previous rotation
+```
+
+Source: `Freecam.java:52-58`
+
+### Interpolation
+
+Smooth rendering uses tick-delta interpolation:
+
+```java
+public double getX(float tickDelta) {
+  return MathHelper.lerp(tickDelta, prevPos.x, pos.x);
+}
+
+public double getYaw(float tickDelta) {
+  return MathHelper.lerp(tickDelta, prevYaw, yaw);
+}
+```
+
+Source: `Freecam.java:312-335`
+
+### Movement Calculation
+
+Camera movement respects diagonal speed normalization:
+
+```java
+// Moving forward/back AND left/right
+if (forwardPressed && sidePressed) {
+  double diagonal = 1 / Math.sqrt(2);
+  velX *= diagonal;
+  velZ *= diagonal;
+}
+```
+
+Source: `Freecam.java:202-207`
+
+This prevents faster diagonal movement, maintaining consistent speed in all directions.
+
+## State Management
+
+### On Enable
+
+Freecam saves and modifies several settings:
+
+```java
+// Save original settings
+fovScale = mc.options.getFovEffectScale().getValue();
+bobView = mc.options.getBobView().getValue();
+perspective = mc.options.getPerspective();
+
+// Disable visual effects
+mc.options.getFovEffectScale().setValue(0.0);
+mc.options.getBobView().setValue(false);
+
+// Initialize camera position
+RenderUtil.set(pos, mc.gameRenderer.getCamera().getPos());
+```
+
+Source: `Freecam.java:67-101`
+
+### On Disable  
+
+All settings are restored:
+
+```java
+mc.options.setPerspective(perspective);
+mc.options.getFovEffectScale().setValue(fovScale);
+mc.options.getBobView().setValue(bobView);
+
+// Restore key states
+mc.options.forwardKey.setPressed(forward);
+mc.options.jumpKey.setPressed(up);
+// ... etc
+```
+
+Source: `Freecam.java:118-134`
+
+<Info>
+Freecam temporarily disables FOV effects and view bobbing for a smoother spectator-like experience. All settings are restored when disabled.
+</Info>
+
+## Perspective Lock
+
+Freecam forces first-person perspective:
+
+```java
+if (!perspective.isFirstPerson()) {
+  mc.options.setPerspective(Perspective.FIRST_PERSON);
+}
+```
+
+Source: `Freecam.java:162`
+
+This prevents perspective cycling while in freecam mode.
+
+## NoClip
+
+Camera automatically enables noclip when inside blocks:
+
+```java
+if (mc.cameraEntity.isInsideWall()) {
+  mc.getCameraEntity().noClip = true;
+}
+```
+
+Source: `Freecam.java:161`
+
+## GUI Compatibility
+
+Freecam respects GUI movement settings:
+
+```java
+private boolean checkGuiMove() {
+  if (mc.currentScreen != null && 
+      !(NoSlow.INSTANCE.isEnabled() && NoSlow.INSTANCE.guiMove.getValue())) {
+    return true; // Disable movement in GUI
+  }
+  return false;
+}
+```
+
+Source: `Freecam.java:337-345`
+
+When a screen is open:
+- Movement keys are unpressed if GUI movement is disabled
+- Camera position and rotation are preserved
+- Integration with NoSlow module's GUI movement feature
+
+## Input Handling
+
+### Keyboard Events
+
+Freecam intercepts and cancels movement key inputs:
+
+```java
+if (mc.options.forwardKey.matchesKey(event.getKey(), 0)) {
+  forward = event.getAction() != GLFW.GLFW_RELEASE;
+  mc.options.forwardKey.setPressed(false);
+  event.setCancelled(true);
+}
+```
+
+Source: `Freecam.java:223-258`
+
+This prevents your player from moving when controlling the camera.
+
+### Mouse Events
+
+Mouse buttons are also intercepted for bound movement keys:
+
+```java
+if (mc.options.forwardKey.matchesMouse(event.getButton())) {
+  forward = !event.getType().equals(MouseEvent.Type.LIFT);
+  mc.options.forwardKey.setPressed(false);
+  event.setCancelled(true);
+}
+```
+
+Source: `Freecam.java:262-298`
+
+### Look Direction
+
+Mouse movement updates camera rotation:
+
+```java
+public void changeLookDirection(double deltaX, double deltaY) {
+  prevYaw = yaw;
+  prevPitch = pitch;
+  
+  yaw += deltaX;
+  pitch += deltaY;
+  
+  pitch = MathHelper.clamp(pitch, -90, 90);
+}
+```
+
+Source: `Freecam.java:300-309`
+
+## Integration Points
+
+Freecam is referenced by other modules:
+
+**Nametags**
+- Shows your own nametag when freecam is active
+- `Freecam.INSTANCE.isEnabled()`
+
+Source: `Nametags.java:257`
+
+**Chams**  
+- Renders self chams in freecam mode
+- Allows seeing your player model from camera position
+
+Source: `Chams.java:347`
+
+## Visual Tips
+
+<Info>
+**Usage Scenarios:**
+
+**Base Inspection:**
+- Speed: 2.0
+- Vertical Speed: 1.0  
+- Rotate: false
+- Fast exploration without interaction
+
+**Precision Building:**
+- Speed: 0.5
+- Vertical Speed: 0.3
+- Rotate: true
+- Slow, controlled movement with interaction
+
+**Combat Observation:**
+- Speed: 1.5
+- Vertical Speed: 0.75
+- Rotate: false
+- Balanced speed for spectating fights
+</Info>
+
+## Technical Details
+
+Freecam operates by:
+
+1. **Position Override** - Camera uses freecam position instead of player position
+2. **Rotation Override** - Camera uses freecam rotation instead of player rotation  
+3. **Input Interception** - Movement keys control camera, not player
+4. **State Preservation** - Player entity remains in original position
+5. **Tick Interpolation** - Smooth movement using `prevPos` and `pos` lerping
+
+The module never teleports your player - it only moves the rendering camera, making it safe for anti-cheat systems that track player movement.
+
+Source: `Freecam.java:1-353`

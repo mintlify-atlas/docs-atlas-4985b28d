@@ -1,0 +1,611 @@
+---
+title: Module API
+description: Complete reference for creating modules in Sn0w
+---
+
+## Overview
+
+Modules are the core features in Sn0w. They extend the `Module` class and provide toggleable functionality with configurable settings.
+
+Location: `api/feature/module/Module.java`
+
+## Module Class Hierarchy
+
+```java
+Feature (api/feature/Feature.java)
+  ↓
+Module (api/feature/module/Module.java)
+  ↓
+YourCustomModule
+```
+
+### Module Constructor
+
+```java
+public Module(String name, Category category)
+```
+
+**Parameters:**
+- `name` - Display name of the module
+- `category` - Module category (see Categories section)
+
+## Basic Module Structure
+
+```java
+package me.skitttyy.kami.impl.features.modules.render;
+
+import me.skitttyy.kami.api.event.eventbus.SubscribeEvent;
+import me.skitttyy.kami.api.event.events.TickEvent;
+import me.skitttyy.kami.api.feature.module.Module;
+import me.skitttyy.kami.api.value.Value;
+import me.skitttyy.kami.api.value.builder.ValueBuilder;
+
+public class ExampleModule extends Module {
+    
+    public ExampleModule() {
+        super("ExampleModule", Category.Render);
+    }
+    
+    @Override
+    public void onEnable() {
+        super.onEnable();
+        // Called when module is enabled
+    }
+    
+    @Override
+    public void onDisable() {
+        super.onDisable();
+        // Called when module is disabled
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Example: Does something cool";
+    }
+}
+```
+
+## Module Categories
+
+Defined in `api/feature/Feature.java:416`
+
+```java
+public enum Category {
+    Client,      // Client settings and UI
+    Combat,      // PvP and combat features
+    Movement,    // Movement modifications
+    Player,      // Player utilities
+    Misc,        // Miscellaneous features
+    Render,      // Visual modifications
+    Ghost,       // Legit/ghost features
+    Hud          // HUD elements
+}
+```
+
+## Module Lifecycle
+
+### Initialization
+
+```java
+public class MyModule extends Module {
+    public MyModule() {
+        super("MyModule", Category.Misc);
+        // Module is now registered with the client
+        // Values can be registered here
+    }
+}
+```
+
+### Enable/Disable
+
+```java
+@Override
+public void onEnable() {
+    super.onEnable(); // MUST call super - registers event listeners
+    
+    // Your enable logic
+    if (mc.world != null) {
+        ChatUtils.sendMessage("Module enabled!");
+    }
+}
+
+@Override
+public void onDisable() {
+    super.onDisable(); // MUST call super - unregisters event listeners
+    
+    // Your disable logic
+    // Clean up any state, remove effects, etc.
+}
+```
+
+**Important:** The `super.onEnable()` and `super.onDisable()` calls handle:
+- Event bus registration/unregistration
+- Chat notifications (if enabled)
+- Module state tracking
+
+### Toggle
+
+```java
+// Toggle module on/off
+module.toggle();
+
+// Check if enabled
+if (module.isEnabled()) {
+    // ...
+}
+
+// Set enabled state
+module.setEnabled(true);
+```
+
+## Module Values (Settings)
+
+### Creating Values
+
+```java
+public class MyModule extends Module {
+    
+    // Boolean value
+    private Value<Boolean> enabled = new ValueBuilder<Boolean>()
+        .withDescriptor("Enable Feature")
+        .withValue(true)
+        .register(this);
+    
+    // String/Mode value
+    public Value<String> mode = new ValueBuilder<String>()
+        .withDescriptor("Mode")
+        .withValue("Fast")
+        .withModes("Fast", "Slow", "Medium")
+        .register(this);
+    
+    // Numeric value
+    private Value<Double> speed = new ValueBuilder<Double>()
+        .withDescriptor("Speed")
+        .withValue(1.0)
+        .withRange(0.1, 5.0)
+        .register(this);
+    
+    // Integer value
+    private Value<Integer> delay = new ValueBuilder<Integer>()
+        .withDescriptor("Delay")
+        .withValue(100)
+        .withRange(0, 1000)
+        .register(this);
+}
+```
+
+### Using Values
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    // Get value
+    if (enabled.getValue()) {
+        String currentMode = mode.getValue();
+        double speedValue = speed.getValue();
+        
+        // Use values
+        switch (currentMode) {
+            case "Fast" -> applyFastMode(speedValue);
+            case "Slow" -> applySlowMode(speedValue);
+        }
+    }
+    
+    // Set value
+    mode.setValue("Medium");
+}
+```
+
+### Page-Based Values
+
+```java
+public Value<String> mode = new ValueBuilder<String>()
+    .withDescriptor("Mode")
+    .withValue("Vanilla")
+    .withModes("Vanilla", "Rage")
+    .register(this);
+
+// This value only shows when mode is "Rage"
+Value<Boolean> rotate = new ValueBuilder<Boolean>()
+    .withDescriptor("Rotate")
+    .withValue(false)
+    .withPageParent(mode)
+    .withPage("Rage")
+    .register(this);
+```
+
+## Event Handling
+
+### Basic Event Listener
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (NullUtils.nullCheck()) return; // Safety check
+    
+    // Your tick logic
+}
+```
+
+### Multiple Events
+
+```java
+@SubscribeEvent
+public void onPacketReceive(PacketEvent.Receive event) {
+    // Handle received packets
+}
+
+@SubscribeEvent
+public void onPacketSend(PacketEvent.Send event) {
+    // Handle sent packets
+}
+
+@SubscribeEvent
+public void onRender(RenderWorldEvent event) {
+    // Render custom elements
+}
+```
+
+### Event Priorities
+
+```java
+@SubscribeEvent(Priority.MODULE_FIRST)
+public void onEarlyTick(TickEvent.ClientTickEvent event) {
+    // Executes before normal priority events
+}
+
+@SubscribeEvent // Defaults to Priority.NORMAL
+public void onNormalTick(TickEvent.ClientTickEvent event) {
+    // Executes at normal priority
+}
+```
+
+## Real-World Examples
+
+### Example 1: FullBright Module
+
+Location: `impl/features/modules/render/FullBright.java`
+
+```java
+public class FullBright extends Module {
+    
+    public FullBright() {
+        super("FullBright", Category.Render);
+    }
+    
+    public Value<String> mode = new ValueBuilder<String>()
+        .withDescriptor("Mode")
+        .withValue("Gamma")
+        .withModes("Gamma", "Potion")
+        .register(this);
+    
+    @SubscribeEvent
+    public void onUpdate(TickEvent.ClientTickEvent event) {
+        if (NullUtils.nullCheck()) return;
+        
+        if (mode.getValue().equals("Potion") 
+            && !mc.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
+            mc.player.addStatusEffect(
+                new StatusEffectInstance(StatusEffects.NIGHT_VISION, -1, 0)
+            );
+        }
+    }
+    
+    @Override
+    public void onDisable() {
+        super.onDisable();
+        if (NullUtils.nullCheck()) return;
+        
+        if (mode.getValue().equals("Potion")) {
+            mc.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+        }
+    }
+    
+    @SubscribeEvent
+    public void onLightmapGamma(LightmapGammaEvent event) {
+        if (mode.getValue().equals("Gamma")) {
+            event.setCancelled(true);
+            event.setGamma(0xffffffff);
+        }
+    }
+    
+    @Override
+    public String getDescription() {
+        return "FullBright: Brights up the entire world";
+    }
+}
+```
+
+### Example 2: Sprint Module
+
+Location: `impl/features/modules/movement/Sprint.java`
+
+```java
+public class Sprint extends Module {
+    public static Sprint INSTANCE;
+    
+    public Sprint() {
+        super("Sprint", Category.Movement);
+        INSTANCE = this; // Singleton pattern
+    }
+    
+    public Value<String> mode = new ValueBuilder<String>()
+        .withDescriptor("Mode")
+        .withValue("Vanilla")
+        .withModes("Vanilla", "Rage")
+        .register(this);
+        
+    Value<Boolean> rotate = new ValueBuilder<Boolean>()
+        .withDescriptor("Rotate")
+        .withValue(false)
+        .withPageParent(mode)
+        .withPage("Rage")
+        .register(this);
+    
+    @SubscribeEvent
+    public void onUpdate(TickEvent.ClientTickEvent event) {
+        if (NullUtils.nullCheck()) return;
+        
+        if (PlayerUtils.isMoving()
+            && !mc.player.isSneaking()
+            && !mc.player.isRiding()
+            && mc.player.getHungerManager().getFoodLevel() > 6.0F) {
+            
+            switch (mode.getValue()) {
+                case "Vanilla" -> {
+                    if (mc.player.input.hasForwardMovement()
+                        && !mc.player.horizontalCollision) {
+                        mc.player.setSprinting(true);
+                    }
+                }
+                case "Rage" -> {
+                    mc.player.setSprinting(true);
+                }
+            }
+        }
+    }
+    
+    @Override
+    public String getHudInfo() {
+        return mode.getValue();
+    }
+}
+```
+
+## Module Features
+
+### HUD Information
+
+Display additional info next to the module name in HUD:
+
+```java
+@Override
+public String getHudInfo() {
+    return mode.getValue(); // Shows "ModuleName [Fast]"
+}
+```
+
+### Module Description
+
+```java
+@Override
+public String getDescription() {
+    return "MyModule: Brief description of what it does";
+}
+```
+
+### Display Name
+
+```java
+// Customize how module appears in lists
+public Value<String> displayName = new ValueBuilder<String>()
+    .withDescriptor("Name")
+    .withValue(getName()) // Default name
+    .register(this);
+
+public String getDisplayName() {
+    return displayName.getValue();
+}
+```
+
+### Visibility
+
+```java
+// Control if module appears in HUD array list
+public Value<Boolean> visible = new ValueBuilder<Boolean>()
+    .withDescriptor("Visible")
+    .withValue(true)
+    .register(this);
+```
+
+### Chat Notifications
+
+```java
+// Automatically handled by base Module class
+Value<Boolean> chatNotify = new ValueBuilder<Boolean>()
+    .withDescriptor("Chat Notify")
+    .withValue(true)
+    .register(this);
+
+// On enable/disable, sends chat message based on Manager settings
+```
+
+## Keybinds
+
+Modules implement `IBindable` through the Module class:
+
+```java
+// Bind field is automatically created
+Bind bind;
+
+@Override
+public int getKey() {
+    return bind.getKey();
+}
+
+@Override
+public void onKey() {
+    if (!bind.getIsMouse())
+        this.toggle();
+}
+
+// Set bind programmatically
+bind.setKey(GLFW.GLFW_KEY_R);
+bind.setIsMouse(false);
+```
+
+## Singleton Pattern
+
+For modules that need to be accessed from other classes:
+
+```java
+public class MyModule extends Module {
+    public static MyModule INSTANCE;
+    
+    public MyModule() {
+        super("MyModule", Category.Misc);
+        INSTANCE = this;
+    }
+}
+
+// Access from anywhere
+if (MyModule.INSTANCE.isEnabled()) {
+    // ...
+}
+```
+
+## Minecraft Access
+
+Modules implement `IMinecraft` interface:
+
+```java
+// Access Minecraft instance
+mc.player
+mc.world
+mc.textRenderer
+mc.currentScreen
+mc.options
+
+// Check if in world
+if (mc.world != null && mc.player != null) {
+    // Safe to access game state
+}
+```
+
+## Configuration (Save/Load)
+
+Automatically handled by the Feature base class:
+
+```java
+@Override
+public void load(Map<String, Object> objects) {
+    super.load(objects);
+    // Custom loading logic if needed
+}
+
+@Override
+public Map<String, Object> save() {
+    Map<String, Object> toSave = super.save();
+    // Custom save logic if needed
+    return toSave;
+}
+```
+
+**What's Saved:**
+- Module enabled state
+- All registered values
+- Keybind settings
+
+## Best Practices
+
+### Null Safety
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    // ALWAYS check before accessing world/player
+    if (NullUtils.nullCheck()) return;
+    
+    // Now safe to use mc.player, mc.world
+}
+```
+
+### Resource Cleanup
+
+```java
+private Timer timer;
+private List<Entity> trackedEntities = new ArrayList<>();
+
+@Override
+public void onDisable() {
+    super.onDisable();
+    
+    // Clean up resources
+    if (timer != null) {
+        timer.reset();
+    }
+    trackedEntities.clear();
+    
+    // Remove effects
+    if (!NullUtils.nullCheck()) {
+        mc.player.removeStatusEffect(StatusEffects.SPEED);
+    }
+}
+```
+
+### Value Dependencies
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (NullUtils.nullCheck()) return;
+    
+    // Only use page values when parent is set correctly
+    if (mode.getValue().equals("Rage") && rotate.getValue()) {
+        doRotation();
+    }
+}
+```
+
+### Performance
+
+```java
+// ❌ Bad - Creates new list every tick
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    List<Entity> entities = new ArrayList<>(mc.world.getEntities());
+}
+
+// ✅ Good - Cache and update periodically
+private List<Entity> cachedEntities = new ArrayList<>();
+private int tickCounter = 0;
+
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (++tickCounter % 20 == 0) { // Every second
+        cachedEntities = new ArrayList<>(mc.world.getEntities());
+    }
+}
+```
+
+## Module Registration
+
+Modules are automatically registered when instantiated. They're typically created in a module manager:
+
+```java
+public class ModuleManager {
+    public void init() {
+        modules.add(new MyModule());
+        modules.add(new AnotherModule());
+        // etc.
+    }
+}
+```
+
+## Related Files
+
+- Module base class: `api/feature/module/Module.java:21`
+- Feature base class: `api/feature/Feature.java:19`
+- Value builder: `api/value/builder/ValueBuilder.java`
+- IMinecraft interface: `api/wrapper/IMinecraft.java`
+- IBindable interface: `api/binds/IBindable.java`

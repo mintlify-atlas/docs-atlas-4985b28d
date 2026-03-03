@@ -1,0 +1,459 @@
+---
+title: Event System
+description: Understanding Sn0w's event-driven architecture
+---
+
+## Overview
+
+Sn0w uses a custom event bus system for handling game events and communication between modules. The event system is built around three core components:
+
+- **Event** - Base class for all events
+- **EventManager** - Central registry and dispatcher
+- **@SubscribeEvent** - Annotation for event listeners
+
+## Event Architecture
+
+### Event Base Class
+
+All events extend from `me.skitttyy.kami.api.event.Event`:
+
+```java
+public abstract class Event {
+    private boolean cancelled;
+    
+    public void post() {
+        this.cancelled = false;
+        // Dispatches to all registered listeners
+    }
+    
+    public boolean isCancelled() {
+        return this.cancelled;
+    }
+    
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
+    }
+}
+```
+
+**Key Features:**
+- Cancellable events can be stopped from propagating
+- Events are posted using the `post()` method
+- Thread-safe implementation using `CopyOnWriteArrayList`
+
+### Event Manager
+
+Location: `api/event/eventbus/EventManager.java`
+
+The EventManager handles registration and dispatching:
+
+```java
+public class EventManager {
+    private final Map<Class<? extends Event>, CopyOnWriteArrayList<EventData>> REGISTRY_MAP;
+    
+    // Register all @SubscribeEvent methods in an object
+    public void register(Object o);
+    
+    // Unregister all listeners from an object
+    public void unregister(Object o);
+    
+    // Get all listeners for a specific event type
+    public CopyOnWriteArrayList<EventData> get(Class<? extends Event> clazz);
+}
+```
+
+**Registration Process:**
+1. Scans all methods in the registered object
+2. Finds methods annotated with `@SubscribeEvent`
+3. Validates method signature (must have exactly one Event parameter)
+4. Stores method reference with priority for efficient invocation
+
+### Event Priorities
+
+Location: `api/event/eventbus/Priority.java`
+
+```java
+public class Priority {
+    public static final byte SUPER_FIRST = 0;
+    public static final byte MANAGER_FIRST = 1;
+    public static final byte MODULE_FIRST = 2;
+    public static final byte NORMAL = 3;        // Default
+    public static final byte MODULE_LAST = 4;
+    public static final byte MANAGER_LAST = 5;
+}
+```
+
+Events are dispatched in order from lowest to highest priority value (SUPER_FIRST executes first).
+
+## Event Types
+
+### Tick Events
+
+Location: `api/event/events/TickEvent.java`
+
+```java
+// Main client tick
+TickEvent.ClientTickEvent
+
+// After client tick
+TickEvent.AfterClientTickEvent
+
+// Input processing tick
+TickEvent.InputTick
+
+// Render tick
+TickEvent.GameRenderTick
+
+// Player movement tick
+TickEvent.MovementTickEvent.Pre
+TickEvent.MovementTickEvent.Post
+
+// Player tick
+TickEvent.PlayerTickEvent.Pre
+TickEvent.PlayerTickEvent.Post
+```
+
+### Network Events
+
+Location: `api/event/events/network/PacketEvent.java`
+
+```java
+// Receive packet (before processing)
+PacketEvent.Receive
+
+// Receive packet (after processing)
+PacketEvent.ReceivePost
+
+// Send packet (before sending)
+PacketEvent.Send
+
+// Send packet (after sending)
+PacketEvent.SendPost
+```
+
+**Example:**
+```java
+@SubscribeEvent
+public void onPacket(PacketEvent.Receive event) {
+    Packet<?> packet = event.getPacket();
+    
+    // Cancel packet to prevent processing
+    if (shouldBlock(packet)) {
+        event.setCancelled(true);
+    }
+}
+```
+
+### Render Events
+
+Location: `api/event/events/render/`
+
+```java
+// World rendering
+RenderWorldEvent
+
+// Entity rendering
+RenderEntityEvent
+
+// Hand rendering
+RenderHandEvent
+
+// Game overlay (HUD)
+RenderGameOverlayEvent
+
+// Block rendering
+RenderBlockEvent
+```
+
+**Example:**
+```java
+@SubscribeEvent
+public void onRenderWorld(RenderWorldEvent event) {
+    MatrixStack matrices = event.getMatrices();
+    float tickDelta = event.getTickDelta();
+    
+    // Render custom 3D elements
+    renderCustomESP(matrices, tickDelta);
+}
+```
+
+### Movement Events
+
+Location: `api/event/events/move/`
+
+```java
+MoveEvent           // Player movement
+LookEvent           // Camera rotation
+SneakEvent          // Sneaking state
+PushEvent           // Entity pushing
+TravelEvent         // Movement calculation
+```
+
+## Event Lifecycle
+
+### 1. Registration
+
+```java
+// Automatically registered when module is enabled
+@Override
+public void onEnable() {
+    super.onEnable();
+    KamiMod.EVENT_BUS.register(this);
+}
+```
+
+### 2. Listening
+
+```java
+@SubscribeEvent
+public void onEvent(SomeEvent event) {
+    // Handle event
+}
+
+// With custom priority
+@SubscribeEvent(Priority.MODULE_FIRST)
+public void onEventEarly(SomeEvent event) {
+    // Executes before NORMAL priority
+}
+```
+
+### 3. Posting
+
+```java
+// From mixins or internal code
+SomeEvent event = new SomeEvent(data);
+event.post();
+```
+
+### 4. Unregistration
+
+```java
+// Automatically unregistered when module is disabled
+@Override
+public void onDisable() {
+    super.onDisable();
+    KamiMod.EVENT_BUS.unregister(this);
+}
+```
+
+## Creating Custom Events
+
+### Step 1: Define Event Class
+
+```java
+package me.skitttyy.kami.api.event.events.custom;
+
+import me.skitttyy.kami.api.event.Event;
+
+public class MyCustomEvent extends Event {
+    private final String data;
+    
+    public MyCustomEvent(String data) {
+        this.data = data;
+    }
+    
+    public String getData() {
+        return data;
+    }
+    
+    // Optional: Create sub-events for different phases
+    public static class Pre extends MyCustomEvent {
+        public Pre(String data) {
+            super(data);
+        }
+    }
+    
+    public static class Post extends MyCustomEvent {
+        public Post(String data) {
+            super(data);
+        }
+    }
+}
+```
+
+### Step 2: Post Event from Mixin
+
+```java
+@Mixin(SomeMinecraftClass.class)
+public class MixinSomeClass {
+    @Inject(method = "someMethod", at = @At("HEAD"))
+    private void onSomeMethod(CallbackInfo ci) {
+        MyCustomEvent.Pre event = new MyCustomEvent.Pre("data");
+        event.post();
+        
+        if (event.isCancelled()) {
+            ci.cancel();
+        }
+    }
+}
+```
+
+### Step 3: Listen for Event
+
+```java
+public class MyModule extends Module {
+    @SubscribeEvent
+    public void onCustomEvent(MyCustomEvent.Pre event) {
+        String data = event.getData();
+        
+        // Process event
+        if (shouldCancel(data)) {
+            event.setCancelled(true);
+        }
+    }
+}
+```
+
+## Best Practices
+
+### Method Signatures
+
+```java
+// ✅ Correct - Single event parameter
+@SubscribeEvent
+public void onEvent(SomeEvent event) { }
+
+// ❌ Wrong - No parameters
+@SubscribeEvent
+public void onEvent() { }
+
+// ❌ Wrong - Multiple parameters
+@SubscribeEvent
+public void onEvent(SomeEvent event, String data) { }
+
+// ❌ Wrong - Wrong parameter type
+@SubscribeEvent
+public void onEvent(String data) { }
+```
+
+### Null Checks
+
+```java
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    // Always check if world/player exists
+    if (NullUtils.nullCheck()) return;
+    
+    // Safe to access mc.player, mc.world
+    mc.player.setSprinting(true);
+}
+```
+
+### Event Cancellation
+
+```java
+@SubscribeEvent(Priority.MODULE_FIRST)
+public void onPacketSend(PacketEvent.Send event) {
+    // Cancel early to prevent other listeners from processing
+    if (shouldBlock(event.getPacket())) {
+        event.setCancelled(true);
+        return; // Exit early
+    }
+}
+```
+
+### Performance
+
+```java
+// ❌ Bad - Heavy computation on every tick
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    List<Entity> entities = mc.world.getEntities();
+    // Process all entities every tick
+}
+
+// ✅ Good - Throttle or cache results
+private int tickCounter = 0;
+private List<Entity> cachedEntities;
+
+@SubscribeEvent
+public void onTick(TickEvent.ClientTickEvent event) {
+    if (++tickCounter % 20 == 0) { // Every second
+        cachedEntities = mc.world.getEntities();
+    }
+}
+```
+
+## Common Patterns
+
+### Conditional Event Listening
+
+```java
+public class ConditionalModule extends Module {
+    private Value<Boolean> enableFeature = new ValueBuilder<Boolean>()
+        .withValue(true)
+        .register(this);
+    
+    @SubscribeEvent
+    public void onTick(TickEvent.ClientTickEvent event) {
+        if (!enableFeature.getValue()) return;
+        
+        // Only execute when enabled
+    }
+}
+```
+
+### Multi-Event Handling
+
+```java
+public class PacketModule extends Module {
+    @SubscribeEvent
+    public void onReceive(PacketEvent.Receive event) {
+        handlePacket(event.getPacket(), "RECEIVE");
+    }
+    
+    @SubscribeEvent
+    public void onSend(PacketEvent.Send event) {
+        handlePacket(event.getPacket(), "SEND");
+    }
+    
+    private void handlePacket(Packet<?> packet, String direction) {
+        // Common processing logic
+    }
+}
+```
+
+## Debugging Events
+
+```java
+@SubscribeEvent
+public void onEvent(SomeEvent event) {
+    // Log event details
+    System.out.println("Event fired: " + event.getClass().getSimpleName());
+    
+    // Log cancellation
+    if (event.isCancelled()) {
+        System.out.println("Event was cancelled");
+    }
+}
+```
+
+## Event System Internals
+
+### EventData Structure
+
+Location: `api/event/EventData.java`
+
+```java
+public class EventData {
+    public final Object source;      // Object containing the listener method
+    public final Method target;      // The @SubscribeEvent method
+    public final byte priority;      // Execution priority
+}
+```
+
+### Event Dispatch Flow
+
+1. `event.post()` is called
+2. EventManager looks up all registered listeners for that event type
+3. Listeners are sorted by priority (already sorted during registration)
+4. Each listener method is invoked via reflection
+5. If event is cancelled, subsequent listeners still execute (cancellation is advisory)
+
+## Related Files
+
+- Event base class: `api/event/Event.java:10`
+- EventManager: `api/event/eventbus/EventManager.java:15`
+- SubscribeEvent annotation: `api/event/eventbus/SubscribeEvent.java:10`
+- Priority constants: `api/event/eventbus/Priority.java:4`
+- EventData: `api/event/EventData.java:5`

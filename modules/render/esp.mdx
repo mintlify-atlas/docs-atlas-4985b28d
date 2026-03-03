@@ -1,0 +1,121 @@
+---
+title: ESP
+description: Multi-purpose ESP module for tracking entities, items, and game events
+---
+
+ESP (Extra Sensory Perception) is a comprehensive visual module that highlights various game elements including players, items, block breaks, chorus teleports, burrows, crawls, and ender pearls.
+
+## Features
+
+ESP is organized into multiple pages for different functionality:
+
+### Basic ESP
+
+Track different entity types with outline rendering:
+
+- **Players** - Highlight other players with colored outlines
+- **Animals** - Show passive and neutral mobs
+- **Monsters** - Highlight hostile mobs
+- **Rideables** - Display vehicles (boats, minecarts, etc.)
+
+<Info>
+Entity colors are configurable through the HudColors module. Friends use a custom color, monsters appear red, and passive mobs are green.
+</Info>
+
+### Break ESP
+
+Visualizes block breaking progress:
+
+- **Standard Breaks** - Shows vanilla block breaking animations from all players
+- **Predictions** - Advanced break prediction using the `BreakManager` system
+- **Range** - Configurable viewing distance (1-15 blocks)
+- **Color Interpolation** - Colors transition from start (red) to ready (green) as breaks progress
+
+```java
+// Break visualization scales with damage percentage
+Box render = new Box(center, center).expand(
+  dx * scale, 
+  dy * scale, 
+  dz * scale
+);
+```
+
+Source: `ESP.java:511-555`
+
+### Items
+
+Track dropped items in the world:
+
+- **Nametags** - Shows item name and stack count
+- **Bounding Boxes** - Renders colored boxes around items
+- **Auto-Range** - Renders items within 20 blocks
+
+### Chorus ESP
+
+Tracks chorus fruit teleport locations with fade animation:
+
+- **Tag Mode** - Displays "*chorus*" text at teleport location
+- **BoundingBox Mode** - Renders a player-sized box
+- **Fade Start** - Delay before fade begins (1-5000ms)
+- **Fade Time** - Duration of fade animation (1-2000ms)
+
+The module listens for `ITEM_CHORUS_FRUIT_TELEPORT` sound packets to detect teleports.
+
+### Burrow ESP
+
+Highlights players who are burrowed inside blocks:
+
+```java
+// Detects players inside solid blocks
+if (HoleUtils.isBurrowed(player)) {
+  burrowedPlayers.put(player, player.getBlockPos());
+}
+```
+
+Source: `ESP.java:502-507`
+
+### Crawl ESP
+
+Shows safe crawl exits when you're crawling:
+
+- Highlights the top surface of adjacent blocks
+- Only shows blocks where you can safely exit crawl
+- Requires 2 blocks of air above the surface
+
+### Pearl ESP
+
+Tracks ender pearls in flight with player name tags:
+
+- Automatically labels pearls with thrower's name
+- Uses entity spawn events to detect new pearls
+- Tags follow the pearl trajectory
+
+## Color Configuration
+
+Each ESP feature has dedicated color settings:
+
+| Feature | Fill Color | Line Color |
+|---------|------------|------------|
+| Breaks (Start) | Red (81 alpha) | Red (255 alpha) |
+| Breaks (Ready) | Green (81 alpha) | Green (255 alpha) |
+| Items | Blue (25 alpha) | Blue (255 alpha) |
+| Chorus | Magenta (25 alpha) | Magenta (255 alpha) |
+| Crawl | Blue (25 alpha) | Blue (255 alpha) |
+| Burrow | Red (25 alpha) | Red (255 alpha) |
+
+## Visual Tips
+
+<Info>
+Use lower alpha values for fill colors (25-81) to maintain visibility through highlighted objects. Keep line colors at full opacity (255) for clear outlines.
+</Info>
+
+## Technical Details
+
+The ESP module uses several rendering techniques:
+
+- **Entity Outline Events** - Cancels vanilla outlines for custom rendering via `EntityOutlineEvent`
+- **Team Color Events** - Overrides entity team colors via `TeamColorEvent`
+- **Concurrent Collections** - Uses `CopyOnWriteArrayList` and `ConcurrentHashMap` for thread-safe tracking
+- **VoxelShape Rendering** - Respects actual block shapes for accurate break visualization
+
+Source: `ESP.java:1-693`

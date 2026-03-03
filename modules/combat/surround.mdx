@@ -1,0 +1,270 @@
+---
+title: SelfTrap (Surround)
+description: Automatic self-protection by surrounding with obsidian blocks
+---
+
+SelfTrap (also known as Surround) automatically surrounds you with obsidian or ender chest blocks to protect against crystal damage and enemy attacks. This is an essential defensive module for crystal PvP.
+
+<Note>
+  In Sn0w, the Surround module is called "SelfTrap". It provides the same functionality of surrounding yourself with obsidian.
+</Note>
+
+## Overview
+
+SelfTrap places obsidian or ender chest blocks around your feet in a protective pattern. The module can dynamically adapt to your movement, break blocking crystals, and even place a block above your head for maximum protection.
+
+## Features
+
+- **Dynamic mode** - Adapts to your position while moving
+- **Feet mode** - Static surround at your current position
+- **Adaptive box** - Adjusts pattern based on surroundings
+- **Crystal breaking** - Removes crystals that block placement
+- **Head protection** - Optional block above head
+- **Smart placement** - Multi-block per tick support
+- **Overplace option** - Can replace existing blocks
+
+## Configuration
+
+### Core Settings
+
+<ParamField path="mode" type="select" default="Dynamic">
+  Surround mode
+  - **Dynamic** - Moves with you, adapts to position changes
+  - **Feet** - Static surround, stays at original position
+</ParamField>
+
+<ParamField path="delay" type="number" default="0">
+  Delay between block placements in milliseconds (0-1000)
+</ParamField>
+
+<ParamField path="adaptiveBox" type="boolean" default="true">
+  Dynamically adjust surround pattern based on movement and surroundings
+</ParamField>
+
+<ParamField path="blocksPerTick" type="number" default="10">
+  Maximum blocks to place per tick (1-10)
+</ParamField>
+
+<ParamField path="range" type="number" default="6">
+  Maximum placement range in blocks (3-6)
+</ParamField>
+
+### Crystal Breaking
+
+<ParamField path="breakCrystal" type="boolean" default="true">
+  Automatically break crystals that block surround placement
+</ParamField>
+
+<ParamField path="predict" type="boolean" default="false">
+  Break crystals preemptively before they block placement (requires Break)
+</ParamField>
+
+<ParamField path="breakDelay" type="number" default="0">
+  Delay between crystal breaks in milliseconds (0-1000)
+</ParamField>
+
+### Advanced Options
+
+<ParamField path="head" type="boolean" default="false">
+  Place a block above your head for additional protection
+</ParamField>
+
+<ParamField path="airPlace" type="boolean" default="false">
+  Allow placing head block in air (requires Head enabled)
+</ParamField>
+
+<ParamField path="overplace" type="boolean" default="false">
+  Replace existing blocks in surround positions (sequential mode)
+</ParamField>
+
+<ParamField path="strictDirection" type="boolean" default="false">
+  Only place on directly visible block faces
+</ParamField>
+
+<ParamField path="rotate" type="boolean" default="false">
+  Rotate towards placement positions
+</ParamField>
+
+<ParamField path="jumpDisable" type="boolean" default="true">
+  Automatically disable module when you jump
+</ParamField>
+
+### Visual Settings
+
+<ParamField path="render" type="boolean" default="true">
+  Render placed blocks with colored boxes
+</ParamField>
+
+<ParamField path="fill" type="color" default="rgba(255, 0, 0, 25)">
+  Fill color for rendered blocks (requires Render)
+</ParamField>
+
+<ParamField path="line" type="color" default="rgba(255, 0, 0, 255)">
+  Outline color for rendered blocks (requires Render)
+</ParamField>
+
+<ParamField path="fadeTime" type="number" default="200">
+  Time in milliseconds before render fades out (0-1000)
+</ParamField>
+
+## Usage
+
+### Basic Setup
+
+1. Enable SelfTrap from the Combat category
+2. Make sure you have obsidian or ender chest in hotbar
+3. Stand in a hole or open area
+4. The module will surround you automatically
+
+### Mode Selection
+
+**Dynamic Mode** (Recommended)
+- Best for active combat
+- Follows you as you move
+- Adapts to new positions
+- Good for hole-to-hole movement
+
+**Feet Mode**
+- Best for static defense
+- Stays at original position
+- Useful for holding a specific hole
+- Lower resource usage
+
+### Adaptive Box Explained
+
+When **Adaptive Box** is enabled, SelfTrap intelligently adjusts its placement pattern:
+- Detects nearby blocks and terrain
+- Skips unnecessary placements
+- Fills only vulnerable directions
+- Reduces block usage
+
+Disable for full 360° protection regardless of surroundings.
+
+### Crystal Breaking Strategy
+
+**Break enabled + Predict disabled:**
+- Breaks crystals as they appear
+- Reactive approach
+- Lower CPU usage
+
+**Break enabled + Predict enabled:**
+- Breaks crystals before they fully spawn
+- Proactive approach
+- Faster surround completion
+- Higher CPU usage
+
+### Head Protection
+
+Enable **Head** to place a block above your head, protecting against:
+- Face place attempts
+- Anchor explosions from above
+- TNT drops
+- Anvil kills
+
+**AirPlace** allows head placement even when there's no block to place on (useful in certain scenarios).
+
+## Performance Optimization
+
+### For Maximum Speed
+- Blocks Per Tick: 10
+- Delay: 0ms
+- Break Delay: 0ms
+- Predict: Enabled
+
+### For Legit Appearance
+- Blocks Per Tick: 2-4
+- Delay: 50-100ms
+- Rotate: Enabled
+- Strict Direction: Enabled
+
+### For Anti-Cheat Bypass
+- Blocks Per Tick: 1-2
+- Delay: 100-200ms
+- Break Delay: 50ms
+- Strict Direction: Enabled
+- Rotate: Enabled
+
+## Integration
+
+### Priority Manager
+
+SelfTrap locks the Priority Manager while placing to prevent conflicts with other modules. It uses the identifier "SelfTrap" for the lock.
+
+### CatAura Integration
+
+Works alongside CatAura - will respect CatAura rotations when breaking crystals.
+
+### AutoBreak Integration
+
+Pauses when AutoBreak is active to prevent conflicts.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Blocks not placing">
+    - Ensure you have obsidian or ender chest in hotbar
+    - Check if delay is too high
+    - Verify range is sufficient
+    - Try disabling Strict Direction
+    - Check if another module locked Priority Manager
+  </Accordion>
+
+  <Accordion title="Module disabling on its own">
+    - This happens when you jump (if Jump Disable is enabled)
+    - Also disables if no valid blocks in hotbar for 600ms
+    - Expected behavior for safety
+  </Accordion>
+
+  <Accordion title="Crystals not breaking">
+    - Enable Break Crystal setting
+    - Lower Break Delay
+    - Enable Predict for faster breaking
+    - Check if you're in attack range (6 blocks)
+  </Accordion>
+
+  <Accordion title="Surround has gaps">
+    - Increase Blocks Per Tick
+    - Lower placement Delay
+    - Enable Break Crystal to remove blocking crystals
+    - Disable Strict Direction
+  </Accordion>
+
+  <Accordion title="Getting kicked by anti-cheat">
+    - Lower Blocks Per Tick (try 1-2)
+    - Increase Delay (100-200ms)
+    - Enable Strict Direction
+    - Enable Rotate
+    - Disable Predict
+  </Accordion>
+</AccordionGroup>
+
+## Block Priority
+
+SelfTrap searches for blocks in this order:
+1. Obsidian (highest priority)
+2. Ender Chest (if no obsidian available)
+
+Ender chests work identically to obsidian but can be picked up with Silk Touch.
+
+## Technical Details
+
+**Collision System:**
+SelfTrap modifies collision boxes for placed blocks to allow you to walk through them immediately after placement. This prevents getting stuck in your own surround.
+
+**Placement Pattern:**
+Uses the ProtectionUtils.getSurroundPlacements() method which calculates optimal positions based on:
+- Your current position
+- Movement direction
+- Nearby terrain
+- Adaptive box settings
+
+**Update Handling:**
+Monitors BlockUpdateS2CPacket to detect when placed blocks are confirmed by the server, preventing duplicate placements.
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/SelfTrap.java:49`
+
+Module category: Combat
+Module name: "SelfTrap"
+Description: "SelfTrap: Like AutoFeetPlace but protects you from faceplace"

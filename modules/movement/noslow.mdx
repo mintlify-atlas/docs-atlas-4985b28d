@@ -1,0 +1,405 @@
+---
+title: NoSlow
+description: Prevents slowdown from items, webs, inventories, and other actions
+---
+
+## Overview
+
+NoSlow removes or reduces movement slowdown effects from various Minecraft actions, allowing you to maintain full mobility while using items, navigating through webs, accessing inventories, and more.
+
+**Description:** Prevents you from getting slowed from various actions
+
+## NoSlow Modes
+
+### Vanilla
+
+Basic slowdown removal with no bypass techniques.
+
+**Best for:** Single player, servers without anti-cheat, or servers with disabled slowdown checks
+
+### Grim
+
+GrimAC anti-cheat bypass using offhand packet manipulation.
+
+**How it works:**
+- Detects when using item in main hand
+- Sends fake `PlayerInteractItemC2SPacket` for offhand
+- Uses server-side rotation from RotationManager
+- Only applies when not riding or flying
+- Automatically skips offhand items
+
+**Limitations:**
+- Only works for main hand items
+- Offhand items will still slow you down
+- Requires not sneaking
+
+**Location:** NoSlow.java:128-139, 164-166
+
+<Tip>
+Grim mode is designed specifically for servers running GrimAC anti-cheat. It may not work on other anti-cheat systems.
+</Tip>
+
+### Meow
+
+Advanced timing-based bypass.
+
+**How it works:**
+- Only allows movement during specific use time windows
+- Movement allowed when: `useTimeLeft < 5` OR `(useTime > 1 AND useTime % 2 != 0)`
+- Optional rotate fix for inventory interactions
+
+**Settings:**
+- `Rotate Fix` - Close inventory after certain actions (default: false)
+
+**Best for:** Servers with sophisticated timing checks
+
+**Location:** NoSlow.java:168-169
+
+### Strict
+
+NoCheatPlus bypass using packet manipulation.
+
+**Techniques:**
+1. **Item Use:** Sends slot update packet on every movement
+2. **Inventory Movement:** Temporarily releases sneak/sprint, sends position packet, then restores state
+
+**How Inventory Bypass Works:**
+- Releases shift if sneaking
+- Stops sprint if sprinting
+- Sends position packet with +0.0656 Y offset
+- Only works when on ground with clearance above
+- Restores sneak/sprint after action
+
+**Location:** NoSlow.java:185-227
+
+<Warning>
+Strict mode's inventory bypass requires being on ground with no block above. It will not work when jumping or in tight spaces.
+</Warning>
+
+## Feature Toggles
+
+### Items
+
+Controls whether NoSlow applies to item usage:
+- Eating food
+- Drinking potions
+- Using bows
+- Blocking with shields
+- Any item with use action
+
+**Default:** true
+
+**Location:** NoSlow.java:43-46, 158-161
+
+### Inv Move (Inventory Movement)
+
+Allows full movement while in inventory screens:
+- Continues walking with WASD
+- Can jump with spacebar
+- Can sprint
+- Arrow keys control camera rotation:
+  - Up Arrow: Pitch up (5° per tick)
+  - Down Arrow: Pitch down (5° per tick)  
+  - Left Arrow: Yaw left (5° per tick)
+  - Right Arrow: Yaw right (5° per tick)
+- Pitch clamped to ±90°
+
+**Supported Screens:**
+- Player inventory
+- Chests and containers
+- Any HandledScreen
+- ClickGui (client GUI)
+
+**Default:** true
+
+**Location:** NoSlow.java:47-118, 265-280
+
+<Tip>
+Inventory movement is excellent for PvP. You can manage inventory while staying mobile, making you much harder to hit.
+</Tip>
+
+### Webs
+
+Removes slowdown when moving through cobwebs.
+
+**Default:** true
+
+**Location:** NoSlow.java:51-54
+
+<Warning>
+Web NoSlow is easily detectable on most anti-cheat systems. Use with caution.
+</Warning>
+
+### Crawling
+
+Removes slowdown when in crawling position (1-block gaps).
+
+**Default:** false
+
+**Location:** NoSlow.java:55-58
+
+### Sneaking
+
+Removes slowdown while sneaking.
+
+**Default:** false
+
+**Location:** NoSlow.java:59-62
+
+<Warning>
+Sneaking NoSlow is very detectable. Most servers expect the sneak slowdown and will flag or kick for removing it.
+</Warning>
+
+## Mode-Specific Behavior
+
+### canNoSlow() Check
+
+Internal method that determines if slowdown removal applies:
+
+```java
+boolean canNoSlow() {
+    if (!isEnabled()) return false;
+    if (!items.getValue()) return false;
+    
+    // Grim mode: skip offhand items
+    if (mode == "Grim" && activeHand == OFF_HAND) return false;
+    
+    // Meow mode: timing-based
+    if (mode == "Meow") {
+        return useTimeLeft < 5 || (useTime > 1 && useTime % 2 != 0);
+    }
+    
+    return true;
+}
+```
+
+**Location:** NoSlow.java:156-172
+
+### Inventory Interaction Modes
+
+**Strict Mode:**
+- Triggers on `ClickSlotC2SPacket` while moving
+- Runs bypass before and after packet
+- Works for all inventory clicks
+
+**Meow Mode with Rotate Fix:**
+- Triggers on `ClickSlotC2SPacket` with sync ID 0
+- Closes inventory after PICKUP/PICKUP_ALL/QUICK_CRAFT actions
+- Prevents some detection methods
+
+**Location:** NoSlow.java:191-194, 240-256
+
+## Integration & Compatibility
+
+### Freecam Compatibility
+
+Inventory movement disables when Freecam is active:
+- Prevents camera control conflicts
+- Returns control when Freecam disabled
+
+**Location:** NoSlow.java:267-268
+
+### Rotation Manager Integration
+
+Grim mode uses RotationManager for accurate packet rotation:
+- `getServerYaw()` - Current server-side yaw
+- `getServerPitch()` - Current server-side pitch
+- Ensures rotations match server expectations
+
+**Location:** NoSlow.java:136
+
+### Packet Manager Integration
+
+All packet sending uses PacketManager for proper handling:
+- `sendPacket()` - Normal packet sending
+- `sendQuietPacket()` - Silent packet sending (no event trigger)
+- Ensures compatibility with other modules
+
+**Location:** NoSlow.java:136, 151, 190, 204-207, 212-213, 222, 225, 254
+
+### Disabler Integration
+
+The `cancelDisabler` flag allows Disabler module to temporarily pause NoSlow:
+- Checked before all packet operations
+- Prevents conflicts with disabler sequences
+
+**Location:** NoSlow.java:31, 180, 234
+
+## Configuration Examples
+
+### Competitive PvP
+```
+Mode: Strict
+Items: true
+Inv Move: true
+Webs: false
+Crawling: false
+Sneaking: false
+```
+Balanced setup for PvP with inventory management.
+
+### GrimAC Server
+```
+Mode: Grim
+Items: true
+Inv Move: true
+Webs: false
+Crawling: false
+Sneaking: false
+```
+Optimized for servers running GrimAC.
+
+### Maximum Mobility (Risky)
+```
+Mode: Vanilla
+Items: true
+Inv Move: true
+Webs: true
+Crawling: true
+Sneaking: true
+```
+All slowdown removal, very detectable.
+
+### Safe Inventory Only
+```
+Mode: Strict
+Items: false
+Inv Move: true
+Webs: false
+Crawling: false
+Sneaking: false
+```
+Only enables inventory movement, safest option.
+
+## Advanced Usage
+
+### Packet Queue System
+
+NoSlow includes a packet queue (currently unused in visible code):
+```java
+private final Queue<Packet<?>> packets = new LinkedBlockingQueue<>();
+```
+
+The `release()` method sends all queued packets:
+- Useful for delayed packet sending
+- Maintains packet order
+- Could be used for advanced bypass techniques
+
+**Location:** NoSlow.java:73, 147-154
+
+### Camera Control in Inventory
+
+When in inventory with Inv Move enabled:
+- Arrow keys directly modify player pitch/yaw
+- Changes are applied every tick
+- Pitch is clamped to prevent over-rotation
+- Works in all supported inventory screens
+
+**Keybinds:**
+- Key 264 (Down Arrow): +5 pitch
+- Key 265 (Up Arrow): -5 pitch
+- Key 262 (Right Arrow): +5 yaw
+- Key 263 (Left Arrow): -5 yaw
+
+**Location:** NoSlow.java:92-115
+
+<Tip>
+Camera control in inventory is subtle but powerful. You can adjust your view while organizing inventory, perfect for quick combat preparation.
+</Tip>
+
+## Usage Tips
+
+<Tip>
+Start with Strict mode as it provides good compatibility across various anti-cheat systems.
+</Tip>
+
+<Tip>
+Inventory movement is the safest NoSlow feature - it rarely triggers anti-cheat since it's just keyboard input, not packet manipulation.
+</Tip>
+
+<Warning>
+Grim mode only works for main hand items. If you need to use offhand items without slowdown, use a different mode.
+</Warning>
+
+<Warning>
+Web NoSlow, Crawling NoSlow, and Sneaking NoSlow are all highly detectable. Enable only when necessary and be prepared for flags.
+</Warning>
+
+## Technical Details
+
+### Strict Mode Bypass Mechanics
+
+**Position Packet Technique:**
+1. Checks if on ground
+2. Checks if jump key is not pressed
+3. Checks if no block collision at +0.0656 Y
+4. Sends position packet with +0.0656 Y offset and onGround=false
+5. Server interprets as valid movement
+6. Bypasses inventory slowdown check
+
+**Why 0.0656?**
+This specific value is small enough to not trigger position checks but large enough to register as actual movement to the server.
+
+**Location:** NoSlow.java:201-216
+
+### Event Priority
+
+Inventory movement uses `@SubscribeEvent(Priority.MODULE_LAST)`:
+- Executes after most other modules
+- Ensures other modules can process movement first
+- Prevents conflicts with rotation/movement modules
+
+**Location:** NoSlow.java:76
+
+### Screen Type Detection
+
+```java
+boolean canInvMove() {
+    if (Freecam.isEnabled()) return false;
+    
+    return screen instanceof AbstractInventoryScreen
+        || screen instanceof HandledScreen
+        || screen instanceof ClickGui;
+}
+```
+
+Covers all inventory-type screens while excluding incompatible screens.
+
+**Location:** NoSlow.java:265-280
+
+## Troubleshooting
+
+**Item slowdown still occurring**
+- Verify Items toggle is enabled
+- Check if using offhand item in Grim mode
+- Try different mode (Strict is most compatible)
+- Check if another module is conflicting
+
+**Inventory movement not working**
+- Verify Inv Move is enabled
+- Check if Freecam is active (disables Inv Move)
+- Ensure you're in a supported inventory screen
+- Try toggling the module off and on
+
+**Getting kicked when using inventory**
+- Switch to Strict mode
+- Ensure you're on ground when clicking
+- Reduce movement while in inventory
+- Try disabling Items toggle (use Inv Move only)
+
+**Camera rotation not working in inventory**
+- Make sure you're using arrow keys, not mouse
+- Verify Inv Move is enabled
+- Check that screen is a supported inventory type
+- Try pressing keys firmly (needs active key press per tick)
+
+**Grim mode not working**
+- Verify item is in main hand (not offhand)
+- Check that you're not sneaking
+- Ensure not riding entity or flying
+- Try switching to Strict mode for comparison
+
+**Meow mode inconsistent**
+- This is expected - it only allows movement during specific timing windows
+- Enable Rotate Fix if having inventory issues
+- Consider switching to Strict for more consistent behavior

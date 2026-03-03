@@ -1,0 +1,90 @@
+---
+title: Bind Command
+description: Bind modules to keyboard or mouse buttons
+---
+
+The `bind` command allows you to bind modules to specific keyboard keys or mouse buttons for quick toggling.
+
+## Syntax
+
+```
+.bind <module> <key>
+```
+
+<ParamField path="module" type="string" required>
+  The name of the module to bind. Module names are case-insensitive and spaces should be removed.
+</ParamField>
+
+<ParamField path="key" type="string" required>
+  The key or mouse button to bind to. For keyboard keys, use the key name (e.g., `R`, `LSHIFT`, `G`). For mouse buttons, use the format `MOUSE_<button>` (e.g., `MOUSE_0`, `MOUSE_1`).
+</ParamField>
+
+## Key Formats
+
+### Keyboard Keys
+
+Keyboard keys should be specified using their standard key names:
+
+- Letter keys: `A`, `B`, `C`, etc.
+- Number keys: `1`, `2`, `3`, etc.
+- Function keys: `F1`, `F2`, `F3`, etc.
+- Modifier keys: `LSHIFT`, `RSHIFT`, `LCONTROL`, `RCONTROL`, `LALT`, `RALT`
+- Special keys: `SPACE`, `TAB`, `ESCAPE`, `ENTER`, etc.
+
+Key names are case-insensitive and will be automatically converted to uppercase.
+
+### Mouse Buttons
+
+Mouse buttons use the format `MOUSE_<number>` where the number corresponds to:
+
+- `MOUSE_0` - Left mouse button
+- `MOUSE_1` - Right mouse button  
+- `MOUSE_2` - Middle mouse button
+- `MOUSE_3`, `MOUSE_4`, etc. - Additional mouse buttons
+
+## Examples
+
+### Bind to Keyboard Key
+
+Bind the KillAura module to the R key:
+
+```
+.bind killaura R
+```
+
+Bind the Flight module to the F key:
+
+```
+.bind flight F
+```
+
+Bind the Sprint module to the Left Shift key:
+
+```
+.bind sprint LSHIFT
+```
+
+### Bind to Mouse Button
+
+Bind the AutoClicker module to the middle mouse button:
+
+```
+.bind autoclicker MOUSE_2
+```
+
+Bind the Velocity module to mouse button 4:
+
+```
+.bind velocity MOUSE_4
+```
+
+## Usage Notes
+
+- Module names should not contain spaces. For multi-word modules, remove the spaces (e.g., "Kill Aura" becomes "killaura")
+- If a module is already bound to a key, using the bind command will rebind it to the new key
+- The command will display a confirmation message showing the module name and the bound key
+- Invalid module names will not produce an error message, so ensure you spell the module name correctly
+
+## Related Commands
+
+- **toggle** - Toggle modules on/off via command

@@ -1,0 +1,267 @@
+---
+title: CatAura (AutoCrystal)
+description: Advanced end crystal automation for crystal PvP combat
+---
+
+CatAura is Sn0w's advanced AutoCrystal module, providing automated end crystal placement and breaking for competitive crystal PvP. The module calculates optimal crystal placements based on damage, manages rotations, and handles complex timing scenarios.
+
+<Note>
+  In Sn0w, the AutoCrystal module is called "CatAura" - both names refer to the same module.
+</Note>
+
+## Overview
+
+CatAura automates the entire crystal PvP workflow:
+- Finds and targets nearby enemies
+- Calculates optimal crystal placement positions
+- Places crystals on obsidian/bedrock
+- Breaks crystals at the right time for maximum damage
+- Manages rotations and packet timing
+
+## Key Features
+
+### Intelligent Targeting
+- **Damage-based sorting** - Prioritizes highest damage opportunities
+- **Range-based sorting** - Targets closest enemies first
+- **Multi-target support** - Can handle multiple enemies
+- **Target range configuration** - Adjustable targeting distance (3-20 blocks)
+
+### Smart Placement
+- **Damage calculation** - Places crystals where they deal maximum damage
+- **Self-damage prevention** - Avoids suicidal placements
+- **Anti-suicide mode** - Won't place lethal crystals
+- **Terrain calculation** - Accounts for blocks in damage calculation
+- **Wall range checking** - Separate range for placing through walls
+
+### Advanced Breaking
+- **Instant break** - Breaks crystals as soon as possible
+- **Timing modes** - Soft/Strict timing for different servers
+- **Inhibit mode** - Prevents enemy crystal placement
+- **Age checking** - Only breaks crystals after certain age
+- **Attack priority** - Smart prioritization of which crystals to break
+
+### Rotation & Anti-Cheat
+- **Multiple rotation modes** - Simple, NCP, GrimAbuse
+- **Yaw step limiting** - Prevents instant rotation snapping
+- **Silent rotations** - Server-side only rotations
+- **Packet-level control** - Precise packet ordering
+
+## Configuration
+
+### Calculation Settings
+
+<ParamField path="minDmg" type="number" default="2">
+  Minimum damage required to place a crystal (0-36)
+</ParamField>
+
+<ParamField path="maxSelfDmg" type="number" default="4">
+  Maximum self damage allowed (0-36)
+</ParamField>
+
+<ParamField path="targetRange" type="number" default="7">
+  Maximum distance to target enemies (3-20 blocks)
+</ParamField>
+
+<ParamField path="noSuicide" type="boolean" default="false">
+  Prevents placing crystals that would kill you
+</ParamField>
+
+<ParamField path="terrain" type="boolean" default="false">
+  Include terrain blocks in damage calculation for more accuracy
+</ParamField>
+
+<ParamField path="armorAssume" type="boolean" default="false">
+  Assume enemies are wearing armor for damage calculation
+</ParamField>
+
+### Place Settings
+
+<ParamField path="placeRange" type="number" default="6">
+  Maximum range to place crystals (1-6 blocks)
+</ParamField>
+
+<ParamField path="placeWallsRange" type="number" default="3">
+  Maximum range when placing through walls (1-6 blocks)
+</ParamField>
+
+<ParamField path="placeDelay" type="number" default="1">
+  Delay between crystal placements in milliseconds (0-1000)
+</ParamField>
+
+<ParamField path="autoSwitch" type="select" default="None">
+  Automatically switch to crystals
+  - **None** - No auto-switching
+  - **Normal** - Regular hotbar switching
+  - **Silent** - Silent switching (server-side)
+  - **SilentBypass** - Bypass-focused silent switching
+</ParamField>
+
+<ParamField path="strictDirection" type="boolean" default="false">
+  Only place on visible block faces
+</ParamField>
+
+### Break Settings
+
+<ParamField path="breakDelay" type="number" default="1">
+  Delay between breaking crystals in milliseconds (0-1000)
+</ParamField>
+
+<ParamField path="breakRange" type="number" default="6">
+  Maximum range to break crystals (1-6 blocks)
+</ParamField>
+
+<ParamField path="breakMode" type="select" default="Normal">
+  Crystal breaking strategy
+  - **Normal** - Standard breaking
+  - **Smart** - Intelligent damage-based breaking
+  - **Inhibit** - Focus on preventing enemy crystals
+</ParamField>
+
+### Rotation Settings
+
+<ParamField path="rotate" type="boolean" default="false">
+  Enable rotation to crystals and targets
+</ParamField>
+
+<ParamField path="rotationsType" type="select" default="Simple">
+  Rotation calculation method
+  - **Simple** - Basic rotations
+  - **NCP** - NoCheatPlus compatible
+  - **GrimAbuse** - GrimAC exploit rotations
+</ParamField>
+
+<ParamField path="yawStep" type="boolean" default="true">
+  Limit rotation speed to appear more legit
+</ParamField>
+
+### Timing Settings
+
+<ParamField path="timing" type="select" default="Soft">
+  Action timing mode
+  - **Soft** - Place and break in same tick
+  - **Strict** - Separate placement and breaking ticks
+</ParamField>
+
+### Render Settings
+
+<ParamField path="fillColor" type="color" default="rgba(0, 0, 0, 100)">
+  Fill color for rendered target positions
+</ParamField>
+
+<ParamField path="lineColor" type="color" default="rgba(255, 255, 255, 255)">
+  Outline color for rendered target positions
+</ParamField>
+
+<ParamField path="renderDamage" type="boolean" default="false">
+  Display damage numbers at crystal positions
+</ParamField>
+
+<ParamField path="renderMode" type="select" default="Normal">
+  Rendering style
+  - **Normal** - Always render current target
+  - **Fade** - Fade out old placements
+</ParamField>
+
+## Usage Tips
+
+### Basic Setup
+
+1. Enable CatAura from the combat category
+2. Set your minimum damage threshold (start with 2-4)
+3. Configure max self damage (keep it low, 4-6 recommended)
+4. Enable rotation if needed for your playstyle
+5. Adjust place/break delays based on server TPS
+
+### Crystal PvP Strategy
+
+- **Aggressive**: High min damage (6+), low delays, Soft timing
+- **Defensive**: Low max self damage (2-3), Anti-suicide enabled
+- **Balanced**: Min damage 3-4, Max self damage 4-6, Strict timing
+
+### Anti-Cheat Bypass
+
+<Warning>
+  Different servers require different configurations. Test in a safe area first.
+</Warning>
+
+**For NoCheatPlus servers:**
+- Rotation type: NCP
+- Strict Direction: Enabled
+- Place delay: 100-200ms
+
+**For GrimAC servers:**
+- Rotation type: GrimAbuse
+- Timing: Strict
+- Place delay: 50-100ms
+
+**For Vanilla/Anarchy:**
+- Any settings work
+- Minimize delays for maximum speed
+- Soft timing recommended
+
+## Advanced Features
+
+### Lethal Crystals
+The `lethalCrystals` setting allows placing crystals that would be lethal if the target has fewer totems. Set to the number of expected totems.
+
+### Multi-Task
+Controls behavior when using other items:
+- **None** - Always allow crystal placement
+- **Soft** - Pause if using main hand
+- **Strong** - Pause all usage
+
+### Mining Ignore
+Integration with AutoBreak module:
+- **None** - No interaction
+- **Ignore** - Pause when mining
+- **StrictIgnore** - Complete pause during mining
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Crystals not placing">
+    - Check if you have crystals in inventory
+    - Verify place range is sufficient
+    - Ensure Auto Switch is enabled or crystals are in hand
+    - Check if target is within target range
+    - Verify min damage threshold isn't too high
+  </Accordion>
+
+  <Accordion title="Taking too much self damage">
+    - Lower Max Self Damage setting
+    - Enable Anti-Suicide
+    - Increase Min Damage threshold
+    - Check if terrain calculation is needed
+  </Accordion>
+
+  <Accordion title="Getting kicked by anti-cheat">
+    - Increase place and break delays
+    - Enable Strict Direction
+    - Use appropriate rotation type for your server
+    - Switch to Strict timing mode
+    - Enable Yaw Step limiting
+  </Accordion>
+
+  <Accordion title="Module not targeting anyone">
+    - Increase Target Range
+    - Lower Min Damage requirement
+    - Check if Priority Manager is locked by another module
+    - Verify targets are valid (not in spectator mode)
+  </Accordion>
+</AccordionGroup>
+
+## Technical Details
+
+CatAura uses multi-threaded calculation for performance, computing optimal placements asynchronously. The module integrates with:
+- **PriorityManager** - Prevents conflicts with other modules
+- **RotationManager** - Handles rotation requests
+- **PacketManager** - Controls packet timing and order
+- **HitboxManager** - For accurate targeting
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/CatAura.java:70`
+
+Module category: Combat
+Module name: "CatAura"
+HUD info: Displays target name and distance

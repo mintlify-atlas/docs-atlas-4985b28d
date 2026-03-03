@@ -1,0 +1,320 @@
+---
+title: Criticals
+description: Forces critical hits on all attacks for increased damage
+---
+
+Criticals makes all your attacks deal critical hit damage by manipulating packets or movement. Critical hits deal 50% more damage, making this module essential for PvP.
+
+## Overview
+
+In Minecraft, critical hits occur when you attack while falling. Criticals simulates this condition through various methods, forcing the server to register your attacks as critical hits.
+
+## Features
+
+- **Multiple modes** - Different bypass methods for various servers
+- **Smart delay** - Configurable cooldown between crits
+- **Sprint handling** - Automatically manages sprint state
+- **Crystal-aware** - Doesn't trigger on crystal attacks
+- **KillAura integration** - Optional KillAura-only mode
+
+## Critical Hit Mechanics
+
+A critical hit requires:
+- Player is falling (not on ground)
+- Player is not sprinting
+- Not attacking an end crystal
+- Not in water or lava
+- Not flying (creative/elytra)
+
+Criticals satisfies these conditions automatically.
+
+## Configuration
+
+<ParamField path="mode" type="select" default="Packet">
+  Critical hit method
+  - **Packet** - Sends fake fall packets (most common)
+  - **Strict** - More precise packet values
+  - **Jump** - Physically jumps for each attack
+  - **MiniJump** - Small hop for each attack
+  - **Grim** - GrimAC bypass method
+  - **GrimV2** - Improved GrimAC bypass
+  - **GrimCC** - GrimAC crawl-based bypass
+</ParamField>
+
+<ParamField path="delay" type="number" default="250">
+  Minimum time between critical attacks in milliseconds (250-1500)
+</ParamField>
+
+<ParamField path="onlyAura" type="boolean" default="false">
+  Only apply criticals when KillAura is active (Only Aura)
+</ParamField>
+
+## Mode Breakdown
+
+### Packet Mode
+Sends two position packets indicating a small fall:
+```
+1. Position + 0.0625 blocks up, onGround=false
+2. Position, onGround=false
+```
+
+**Best for:** Most vanilla and lightly protected servers
+
+### Strict Mode
+Uses precise falling motion values:
+```
+1. Position + 1.1E-7 blocks up, onGround=false
+2. Position + 1.0E-8 blocks up, onGround=false
+3. Position, onGround=true
+```
+
+**Best for:** Servers with strict movement checks
+
+### Jump Mode
+Physically makes your player jump for each attack.
+
+**Pros:**
+- Most legit method
+- Never detected by anti-cheat
+- Works on all servers
+
+**Cons:**
+- Obvious to other players
+- Slower attack rate
+- Affects movement
+
+**Best for:** Legit play or strict anti-cheat
+
+### MiniJump Mode
+Applies small vertical velocity (0.3425) without full jump.
+
+**Best for:** Semi-legit play with less obvious movement
+
+### Grim Mode
+Special packet sequence for GrimAC:
+```
+1. Position + 0.0625 blocks up, onGround=false
+2. Position + 0.04535 blocks up, onGround=false
+```
+
+Requires being clipped in a block or taking velocity.
+
+**Best for:** GrimAC servers (when velocity system active)
+
+### GrimV2 Mode
+Sends position slightly below current position:
+```
+Position - 0.0001 blocks down, onGround=false
+```
+
+Only works when airborne.
+
+**Best for:** GrimAC servers with movement prediction
+
+### GrimCC Mode
+Exploits crawl mechanics:
+```
+1. Position + 0.0625, onGround=false
+2. Position + 0.0625013579, onGround=false
+3. Position + 1.3579e-6, onGround=false
+```
+
+Requires head to be inside a block (crawling).
+
+**Best for:** GrimAC servers when crawling
+
+## Usage
+
+### Basic Setup
+
+1. Enable Criticals from Combat category
+2. Select appropriate mode for your server
+3. Set delay based on your attack speed
+4. Test in safe environment
+
+### Mode Selection Guide
+
+**Vanilla/Anarchy Servers:**
+- Use: Packet mode
+- Delay: 250ms
+
+**NoCheatPlus Servers:**
+- Use: Strict mode
+- Delay: 300-500ms
+
+**GrimAC Servers:**
+- Use: GrimV2 or GrimCC
+- Delay: 500-1000ms
+- May require specific conditions
+
+**Legit Play:**
+- Use: Jump mode
+- Delay: 250ms
+- Most obvious but undetectable
+
+### Delay Configuration
+
+The delay prevents spam and reduces anti-cheat detection:
+
+- **250ms** - Default, good balance
+- **500ms** - Conservative, safer
+- **1000ms+** - Very safe, slower attacks
+
+<Info>
+  Lower delays = faster crits but more likely to be detected. Higher delays = safer but slower DPS.
+</Info>
+
+## Sprint Management
+
+Criticals automatically handles sprinting:
+
+1. Detects if you're sprinting when attacking
+2. Sends stop sprinting packet
+3. Performs critical attack
+4. Resumes sprinting
+
+This happens automatically - no configuration needed.
+
+## Integration
+
+### KillAura Integration
+
+When **Only Aura** is enabled:
+- Criticals only applies to KillAura attacks
+- Manual attacks won't be critical
+- Useful for separating automation from manual play
+
+### 32k Detection
+
+Criticals automatically disables for 32k weapons (weapons with very high sharpness enchantments) since they don't benefit from critical hits.
+
+### Crystal Attacks
+
+Criticals never triggers on end crystal attacks - critical hits don't apply to crystals.
+
+## Conditions & Limitations
+
+### When Criticals Won't Work
+
+- **In water or lava** - Game mechanics prevent crits
+- **Flying (creative mode)** - Can't be falling while flying
+- **Flying (elytra)** - Same reason
+- **Holding 32k weapon** - Disabled automatically
+- **Attacking crystals** - Crits don't apply to crystals
+- **Delay not passed** - Must wait between attacks
+
+### GrimAC Mode Requirements
+
+**Grim mode requires:**
+- Being clipped in a block, OR
+- Recently took velocity/explosion damage
+
+Use `canGrimCrit` flag to check if conditions are met.
+
+**GrimCC mode requires:**
+- Head inside a block (crawling state)
+
+The module checks `isHeadBlocked()` before applying.
+
+## Technical Details
+
+### Packet Interception
+
+Criticals intercepts `PlayerInteractEntityC2SPacket` (attack packets) and injects position packets before them:
+
+```java
+@SubscribeEvent
+public void onPacket(PacketEvent.Send event)
+{
+    if (event.getPacket() instanceof PlayerInteractEntityC2SPacket packet)
+    {
+        // Insert crit packets here
+    }
+}
+```
+
+### Velocity Tracking
+
+For Grim mode, tracks when velocity is received:
+- Monitors `EntityVelocityUpdateS2CPacket`
+- Monitors `ExplosionS2CPacket`
+- Sets `canGrimCrit` flag when detected
+- Resets on death or server disconnect
+
+### Ground State
+
+Strict mode sends a final packet with `onGround=true` to reset server-side state:
+
+```java
+PacketManager.INSTANCE.sendPacket(
+    new PlayerMoveC2SPacket.PositionAndOnGround(
+        mc.player.getX(), 
+        mc.player.getY(), 
+        mc.player.getZ(), 
+        true
+    )
+);
+```
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Not getting critical hits">
+    - Check if delay has passed (default 250ms between crits)
+    - Verify you're on ground when attacking
+    - Ensure you're not in water/lava
+    - Try different mode for your server
+    - Check if attacking crystals (crits don't apply)
+  </Accordion>
+
+  <Accordion title="Getting kicked for movement">
+    - Switch to Strict mode
+    - Increase delay to 500-1000ms
+    - Try Jump mode for most legit method
+    - Your server may have strict anti-cheat
+  </Accordion>
+
+  <Accordion title="Grim modes not working">
+    - **Grim mode**: Requires taking velocity first or being clipped
+    - **GrimV2 mode**: Only works when airborne
+    - **GrimCC mode**: Requires crawling (head in block)
+    - Check console for `canGrimCrit` status
+  </Accordion>
+
+  <Accordion title="Module working inconsistently">
+    - Delay might be too low, increase it
+    - Server lag can affect timing
+    - Some modes require specific conditions
+    - Try Packet or Strict mode for consistency
+  </Accordion>
+</AccordionGroup>
+
+## Strategy Tips
+
+### Maximum DPS
+- Mode: Packet
+- Delay: 250ms
+- Only Aura: Disabled
+
+### Legit Appearance
+- Mode: Jump or MiniJump
+- Delay: 500ms
+- Only Aura: Enabled
+
+### Anti-Cheat Bypass
+- Mode: Strict or appropriate Grim variant
+- Delay: 500-1000ms
+- Only Aura: Depends on preference
+
+<Tip>
+  Combine with KillAura and AutoTotem for a powerful automated combat setup.
+</Tip>
+
+## Source Code Reference
+
+Location: `src/main/java/me/skitttyy/kami/impl/features/modules/combat/Criticals.java:31`
+
+Module category: Combat
+Module name: "Criticals"
+Description: "Criticals: Makes all ur attacks critical hits!"
+HUD info: Displays current mode

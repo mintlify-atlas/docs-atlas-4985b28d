@@ -1,0 +1,610 @@
+---
+title: SpeedMine
+description: Break blocks faster with multiple mining modes
+icon: hammer
+---
+
+## Overview
+
+SpeedMine (implemented as Nuker) allows you to break blocks much faster than normal mining. It features multiple modes for different scenarios: mass block breaking, terrain flattening, selective mining, farming, and even a special pearl mode for end portal frames.
+
+## Features
+
+- Five mining modes for different purposes
+- Automatic rotation towards blocks
+- Configurable range (1-6 blocks)
+- Automatic closest block selection
+- Strict mode for anti-cheat compatibility
+- Special pearl mode for item frame attacks
+- Works with AutoTool for automatic tool selection
+
+## Settings
+
+<ParamField path="Mode" type="enum" default="All">
+  Mining behavior mode
+  
+  - **All**: Breaks any mineable block within range
+  - **Flatten**: Only breaks blocks at or above your Y level (creates flat surface)
+  - **Selective**: Only breaks shulker boxes
+  - **Farm**: Only breaks fully grown crops
+  - **Pearl**: Attacks item frames (for pearl teleportation)
+</ParamField>
+
+<ParamField path="Range" type="number" default="5.0">
+  Maximum mining distance in blocks (1.0-6.0)
+  
+  Higher range is more efficient but more detectable
+</ParamField>
+
+<ParamField path="Rotate" type="boolean" default="true">
+  Automatically rotates your head towards the block being mined
+  
+  Recommended for anti-cheat compatibility
+</ParamField>
+
+<ParamField path="Strict" type="boolean" default="true">
+  Only mines blocks you can directly see (no mining through walls)
+  
+  More anti-cheat safe but may miss some blocks
+</ParamField>
+
+<ParamField path="Predict" type="boolean" default="true">
+  (Pearl mode only) Predicts and breaks item frames before they fully spawn
+</ParamField>
+
+## How It Works
+
+<Steps>
+  <Step title="Block Scanning">
+    Scans all blocks within range to find valid mining targets:
+    
+    ```java
+    // Located at: player/Nuker.java:154-183
+    for (float x = range; x >= -range; x--) {
+        for (float y = range; y >= (mode.equals("Flatten") ? 0 : -range); y--) {
+            for (float z = range; z >= -range; z--) {
+                BlockPos pos = mc.player.getBlockPos().add(x, y, z);
+                double distance = mc.player.squaredDistanceTo(pos.toCenterPos());
+                
+                if (canMine(pos) && distance < bestDistance) {
+                    bestDistance = distance;
+                    nukerBlock = pos;
+                }
+            }
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Mode Filtering">
+    Applies mode-specific filters to determine if block should be mined
+  </Step>
+  
+  <Step title="Rotation (Optional)">
+    If enabled, rotates towards the selected block
+  </Step>
+  
+  <Step title="Mining">
+    Continuously attacks the block until broken:
+    
+    ```java
+    Direction side = BlockUtils.getMineableSide(current, strict.getValue());
+    mc.interactionManager.updateBlockBreakingProgress(current, side);
+    mc.player.swingHand(Hand.MAIN_HAND);
+    ```
+  </Step>
+</Steps>
+
+## Mining Modes
+
+<Tabs>
+  <Tab title="All Mode">
+    ### Universal Mining
+    
+    Breaks any mineable block within range:
+    
+    **Use Cases:**
+    - Clearing areas quickly
+    - Breaking through barriers in PvP
+    - General resource gathering
+    - Mining tunnels
+    
+    **Behavior:**
+    - Scans full sphere around player (range)
+    - Selects closest valid block
+    - Breaks continuously
+    - Moves to next block automatically
+    
+    **Best Settings:**
+    ```yaml
+    Mode: All
+    Range: 5.0
+    Rotate: true
+    Strict: true
+    ```
+  </Tab>
+  
+  <Tab title="Flatten Mode">
+    ### Terrain Flattening
+    
+    Only breaks blocks at or above your feet level:
+    
+    ```java
+    // Located at: player/Nuker.java:162
+    for (float y = range; y >= (mode.getValue().equals("Flatten") ? 0 : -range); y--)
+    ```
+    
+    **Use Cases:**
+    - Creating flat platforms
+    - Clearing surface terrain
+    - Building site preparation
+    - Removing trees/structures
+    
+    **Behavior:**
+    - Only scans Y >= player's Y level
+    - Never digs below you
+    - Creates level surface
+    
+    **Example:**
+    ```
+    Before:      After:
+      █ █          
+     ███         ─────  (flat surface)
+    █████   →     P
+      █          ███
+      █          ███
+    ```
+  </Tab>
+  
+  <Tab title="Selective Mode">
+    ### Shulker Box Mining
+    
+    Only breaks shulker boxes:
+    
+    ```java
+    // Located at: player/Nuker.java:192-211
+    if (mode.getValue().equals("Selective")) {
+        if (state.getBlock() instanceof ShulkerBoxBlock) {
+            // Valid target
+        } else {
+            return false;  // Skip non-shulker blocks
+        }
+    }
+    ```
+    
+    **Use Cases:**
+    - Griefing enemy shulker stashes
+    - Breaking opponent's storage in PvP
+    - Selective base breaking
+    
+    **Features:**
+    - Tracks placed shulkers to avoid breaking your own
+    - Monitors block updates
+    - Blacklist system
+    
+    **Best Paired With:**
+    - AutoTool (pickaxe for obsidian-surrounded shulkers)
+    - ESP to see shulker boxes through walls
+  </Tab>
+  
+  <Tab title="Farm Mode">
+    ### Automatic Farming
+    
+    Only breaks fully grown crops:
+    
+    ```java
+    // Located at: player/Nuker.java:192-201
+    if (mode.getValue().equals("Farm")) {
+        if (state.getBlock() instanceof CropBlock crop) {
+            int age = crop.getAge(state);
+            if (age != crop.getMaxAge()) return false;  // Skip immature crops
+        } else {
+            return false;  // Skip non-crop blocks
+        }
+    }
+    ```
+    
+    **Compatible Crops:**
+    - Wheat
+    - Carrots  
+    - Potatoes
+    - Beetroot
+    - Nether wart
+    
+    **Use Cases:**
+    - Automated crop harvesting
+    - Large farm management
+    - Quick harvest before replanting
+    
+    **Best Settings:**
+    ```yaml
+    Mode: Farm
+    Range: 6.0  (max range for large farms)
+    Rotate: false  (not needed for crops)
+    Strict: false  (can break through crops)
+    ```
+  </Tab>
+  
+  <Tab title="Pearl Mode">
+    ### Item Frame Breaker
+    
+    Attacks item frames for pearl teleportation:
+    
+    ```java
+    // Located at: player/Nuker.java:108-126
+    for (Entity entity : mc.world.getOtherEntities(null, mc.player.getBoundingBox())) {
+        if (entity instanceof ItemFrameEntity) {
+            // Break held item first if present
+            if (!((ItemFrameEntity) entity).getHeldItemStack().isEmpty()) {
+                PacketManager.INSTANCE.sendPacket(
+                    PlayerInteractEntityC2SPacket.attack(entity, mc.player.isSneaking()));
+                PacketManager.INSTANCE.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+            }
+            // Break frame itself
+            PacketManager.INSTANCE.sendPacket(
+                PlayerInteractEntityC2SPacket.attack(entity, mc.player.isSneaking()));
+            PacketManager.INSTANCE.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+        }
+    }
+    ```
+    
+    **Pearl Teleportation:**
+    1. Throw ender pearl
+    2. Place item frame at destination
+    3. Enable Pearl mode
+    4. Pearl teleports when frame breaks
+    
+    **Predict Setting:**
+    When enabled, breaks frames as they spawn:
+    ```java
+    @SubscribeEvent
+    public void onEntityAdd(EntityEvent.Add event) {
+        if (event.getEntity() instanceof ItemFrameEntity entity) {
+            if (new Box(mc.player.getBlockPos()).expand(0, 0.2, 0)
+                .intersects(entity.getBoundingBox())) {
+                // Immediately break the frame
+            }
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Block Filtering
+
+SpeedMine validates blocks before mining:
+
+```java
+// Located at: player/Nuker.java:185-215
+public boolean canMine(BlockPos pos) {
+    BlockState state = mc.world.getBlockState(pos);
+    double distance = mc.player.squaredDistanceTo(pos.toCenterPos());
+    
+    // Mode-specific checks (Farm, Selective, etc.)
+    // ...
+    
+    return !state.isAir() 
+        && !(state.getBlock() instanceof FluidBlock)
+        && !(distance > MathUtil.square(breakRange.getValue().floatValue()))
+        && BlockUtils.isMineable(state);
+}
+```
+
+### Invalid Blocks
+
+- Air blocks
+- Fluids (water, lava)
+- Out of range blocks
+- Unmineable blocks (bedrock, barriers)
+- Mode-specific exclusions
+
+## HUD Info
+
+Shows current mining mode:
+```java
+@Override
+public String getHudInfo() {
+    return mode.getValue();  // "All", "Flatten", etc.
+}
+```
+
+## Configuration Presets
+
+<CodeGroup>
+```yaml Fast Terrain Clear
+Mode: All
+Range: 5.0
+Rotate: true
+Strict: false
+
+→ Breaks everything nearby
+→ Maximum efficiency
+→ Good for vanilla servers
+```
+
+```yaml Anti-Cheat Safe
+Mode: All
+Range: 4.5
+Rotate: true
+Strict: true
+
+→ Only visible blocks
+→ Natural head rotation
+→ Safer for strict servers
+```
+
+```yaml Platform Builder
+Mode: Flatten
+Range: 6.0
+Rotate: false
+Strict: false
+
+→ Only breaks above you
+→ Max range for efficiency
+→ Creates flat surface
+```
+
+```yaml Auto Farm
+Mode: Farm
+Range: 6.0
+Rotate: false
+Strict: false
+
+→ Only mature crops
+→ Large coverage area
+→ Rotation not needed
+```
+
+```yaml Shulker Raid
+Mode: Selective
+Range: 5.0
+Rotate: true
+Strict: true
+
+→ Only shulker boxes
+→ Anti-cheat compatible
+→ PvP focused
+```
+
+```yaml Pearl TP
+Mode: Pearl
+Range: N/A
+Predict: true
+
+→ Instant frame breaking
+→ Prediction enabled
+→ For pearl tricks
+```
+</CodeGroup>
+
+## Advanced Techniques
+
+<AccordionGroup>
+  <Accordion title="Closest Block Algorithm">
+    SpeedMine always mines the closest valid block:
+    
+    ```java
+    double bestDistance = 9999;
+    for (each block in range) {
+        double distance = mc.player.squaredDistanceTo(pos.toCenterPos());
+        if (distance >= bestDistance) continue;
+        if (canMine(pos)) {
+            bestDistance = distance;
+            nukerBlock = pos;
+        }
+    }
+    ```
+    
+    This ensures:
+    - Efficient mining pattern (inside-out)
+    - No wasted movement
+    - Continuous operation
+  </Accordion>
+  
+  <Accordion title="Strict Mode">
+    Strict mode ensures you can see the block's side:
+    
+    ```java
+    Direction side = BlockUtils.getMineableSide(current, strict.getValue());
+    if (side == null) return;  // Can't see any side
+    ```
+    
+    **Why Use Strict:**
+    - Prevents X-ray-like behavior
+    - More natural mining pattern
+    - Less likely to trigger anti-cheat
+    
+    **When to Disable:**
+    - Vanilla servers
+    - Farm mode (crops block each other)
+    - Maximum efficiency needed
+  </Accordion>
+  
+  <Accordion title="Shulker Blacklist System">
+    Selective mode tracks your own shulker placements:
+    
+    ```java
+    @SubscribeEvent
+    public void onPacketSend(PacketEvent.Send event) {
+        if (event.getPacket() instanceof PlayerInteractBlockC2SPacket packet) {
+            if (BlockUtils.SHULKER_BLOCKS.contains(
+                mc.player.getStackInHand(packet.getHand()).getItem())) {
+                shulkerBlackList.add(packet.getBlockHitResult().getBlockPos()
+                    .offset(packet.getBlockHitResult().getSide()));
+            }
+        }
+    }
+    ```
+    
+    This prevents breaking your own shulkers while breaking others'
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+<CodeGroup>
+```text Clearing Area
+1. Set Mode to "All"
+2. Set Range to 5.0
+3. Stand in center of area
+4. Enable SpeedMine
+5. Blocks break in expanding sphere
+6. AutoTool switches tools automatically
+```
+
+```text Flattening Terrain
+1. Set Mode to "Flatten"
+2. Set Range to 6.0 (max coverage)
+3. Walk across area
+4. Only removes blocks above you
+5. Creates level platform
+```
+
+```text Farm Harvesting
+1. Set Mode to "Farm"
+2. Disable Rotate (faster)
+3. Set Range to 6.0
+4. Stand in farm center
+5. Enable SpeedMine
+6. Only mature crops break
+7. Replant manually or with AutoFarm
+```
+
+```text Shulker Raid
+1. Set Mode to "Selective"
+2. Enable Rotate and Strict
+3. Place your own shulkers first
+4. Enable SpeedMine
+5. Only enemy shulkers break
+6. Your shulkers stay safe
+```
+
+```text Pearl Teleport
+1. Throw ender pearl towards destination
+2. Quickly place item frame at destination
+3. Set Mode to "Pearl"
+4. Enable Predict
+5. Enable SpeedMine
+6. Frame breaks → pearl teleports
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use AutoTool" icon="toolbox">
+    Enable AutoTool for automatic tool selection when breaking different block types
+  </Card>
+  
+  <Card title="Adjust Range" icon="circle">
+    Lower range (3-4) is safer for anti-cheat, higher (5-6) is more efficient
+  </Card>
+  
+  <Card title="Enable Rotate" icon="rotate">
+    Always enable Rotate on servers with anti-cheat for more natural appearance
+  </Card>
+  
+  <Card title="Use Strict Mode" icon="shield">
+    Enable Strict on strict servers to avoid X-ray detection
+  </Card>
+</CardGroup>
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Optimize Range">
+    - **Range 3-4**: Fastest scanning, good for dense areas
+    - **Range 5**: Balanced performance and coverage
+    - **Range 6**: Slower scanning but max coverage
+    
+    Higher range requires more block checks per tick
+  </Accordion>
+  
+  <Accordion title="Disable Unnecessary Features">
+    - Disable Rotate if not needed (vanilla servers)
+    - Disable Strict for maximum speed (farm mode)
+    - Use specific modes instead of All when possible
+  </Accordion>
+</AccordionGroup>
+
+## Compatibility
+
+<Tabs>
+  <Tab title="Compatible Modules">
+    <Check>**AutoTool** - Automatically selects best tool</Check>
+    <Check>**FastBreak** - Breaks blocks even faster</Check>
+    <Check>**NoBreakDelay** - Removes break delay</Check>
+    <Check>**Reach** - Mine from further away</Check>
+  </Tab>
+  
+  <Tab title="Anti-Cheat">
+    **Safe Configuration:**
+    ```yaml
+    Range: 4.5 or lower
+    Rotate: true
+    Strict: true
+    ```
+    
+    **Detection Risk:**
+    - Range > 5: High risk
+    - Rotate disabled: Medium risk  
+    - Strict disabled: Medium risk
+    - Very fast breaking: High risk
+  </Tab>
+</Tabs>
+
+<Warning>
+  Mining with large range and disabled rotation/strict mode will likely trigger anti-cheat on most servers. Start conservative and adjust.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Not Mining Any Blocks">
+    **Check:**
+    1. Range is high enough to reach blocks
+    2. Mode matches block type (e.g., Farm mode only breaks crops)
+    3. Blocks are actually mineable (not bedrock/barriers)
+    4. You have a tool to break them (use AutoTool)
+  </Accordion>
+  
+  <Accordion title="Mining Too Slow">
+    **Solutions:**
+    1. Disable Rotate for slightly faster operation
+    2. Decrease Range to reduce scan time
+    3. Enable FastBreak module
+    4. Use efficiency enchanted tools
+    5. Check server TPS (lag affects break speed)
+  </Accordion>
+  
+  <Accordion title="Getting Kicked by Anti-Cheat">
+    **Reduce detection:**
+    1. Lower Range to 4.0 or less
+    2. Enable Rotate
+    3. Enable Strict
+    4. Add delay between breaks (use other modules)
+  </Accordion>
+  
+  <Accordion title="Farm Mode Not Working">
+    **Verify:**
+    1. Crops are actually fully grown
+    2. You're breaking vanilla crops (not modded)
+    3. Range includes the crops
+    4. Mode is set to "Farm" not "All"
+  </Accordion>
+  
+  <Accordion title="Selective Mode Breaking Own Shulkers">
+    The blacklist system should prevent this, but if it happens:
+    1. Disable and re-enable the module
+    2. Place your shulkers with the module enabled
+    3. Check if you're using the correct hand for placement
+  </Accordion>
+</AccordionGroup>
+
+## Related Modules
+
+- **AutoTool**: Automatically switches to the best tool for each block type
+- **FastBreak**: Further speeds up block breaking
+- **NoBreakDelay**: Removes the break animation delay
+- **Reach**: Extend mining range beyond 6 blocks
+- **Scaffold**: Builds while Nuker breaks

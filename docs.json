@@ -1,122 +1,128 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Sn0w",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#67C6E3",
+    "light": "#A3E4F7",
+    "dark": "#2B5F7C"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Skitttyy/Sn0w"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Skitttyy/Sn0w"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
               "index",
+              "installation",
               "quickstart",
-              "development"
+              "faq"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Configuration",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "configuration/overview",
+              "configuration/keybinds",
+              "configuration/config-files"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Modules",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Combat",
             "pages": [
-              "api-reference/introduction"
+              "modules/combat/overview",
+              "modules/combat/autocrystal",
+              "modules/combat/killaura",
+              "modules/combat/surround",
+              "modules/combat/autototem",
+              "modules/combat/autoanchor",
+              "modules/combat/criticals"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Movement",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "modules/movement/overview",
+              "modules/movement/speed",
+              "modules/movement/flight",
+              "modules/movement/elytrafly",
+              "modules/movement/holesnap",
+              "modules/movement/noslow"
+            ]
+          },
+          {
+            "group": "Render",
+            "pages": [
+              "modules/render/overview",
+              "modules/render/esp",
+              "modules/render/nametags",
+              "modules/render/holeesp",
+              "modules/render/chams",
+              "modules/render/freecam"
+            ]
+          },
+          {
+            "group": "Misc",
+            "pages": [
+              "modules/misc/overview",
+              "modules/misc/autotool",
+              "modules/misc/autoreplenish",
+              "modules/misc/fakeplayer",
+              "modules/misc/announcer"
+            ]
+          },
+          {
+            "group": "Player",
+            "pages": [
+              "modules/player/overview",
+              "modules/player/speedmine",
+              "modules/player/scaffold",
+              "modules/player/fastplace"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/commands/overview",
+              "reference/commands/bind",
+              "reference/commands/config",
+              "reference/commands/friend",
+              "reference/commands/waypoint"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "reference/advanced/event-system",
+              "reference/advanced/module-api",
+              "reference/advanced/extending"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

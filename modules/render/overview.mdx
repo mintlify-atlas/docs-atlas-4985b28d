@@ -1,0 +1,48 @@
+---
+title: Render Modules Overview
+description: Visual enhancement and ESP modules for the Sn0w client
+---
+
+Render modules provide visual enhancements, ESP (Extra Sensory Perception) features, and camera utilities to improve your gameplay awareness and visual experience.
+
+## Module Categories
+
+### ESP & Highlighting
+
+These modules help you see important entities and locations through walls:
+
+- **[ESP](/modules/render/esp)** - Multi-purpose ESP with support for players, items, breaks, chorus, burrows, crawls, and pearls
+- **[HoleESP](/modules/render/holeesp)** - Highlights safe holes (bedrock/obsidian) that prevent crystal damage
+- **[Nametags](/modules/render/nametags)** - Enhanced player nametags with customizable information
+
+### Visual Effects
+
+- **[Chams](/modules/render/chams)** - See entities through walls with customizable colors and effects
+- **[Freecam](/modules/render/freecam)** - Detach your camera from your player for better perspective
+
+## Visual Customization
+
+All render modules feature extensive color customization through `Sn0wColor` values, supporting:
+- RGB color selection
+- Alpha transparency
+- Fill and outline colors
+- Gradient/fade effects
+
+<Info>
+Render modules use the client's shader system for advanced visual effects. Shaders are located in `resources/assets/kami/shaders/program/`.
+</Info>
+
+## Performance Considerations
+
+Render modules use various optimization techniques:
+- **Concurrent rendering** - Modules like HoleESP use `ExecutorService` for background calculations
+- **Range-based rendering** - Most modules have configurable render distances to reduce overhead
+- **Render buffers** - Efficient batch rendering through `RenderBuffers` system
+
+## Common Settings
+
+Most render modules share these common configuration options:
+- **Range** - Maximum distance to render features
+- **Fill Color** - Color for filled areas
+- **Line Color** - Color for outlines
+- **Alpha** - Transparency level (0-255)

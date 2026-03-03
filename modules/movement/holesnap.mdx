@@ -1,0 +1,439 @@
+---
+title: Holesnap
+description: Signature Sn0w feature - Automatically snap into nearby safe holes
+---
+
+<Note>
+Holesnap is an **original Sn0w feature** mentioned in the project README as a signature capability of this client!
+</Note>
+
+## Overview
+
+Holesnap automatically detects nearby safe holes (1x1 obsidian/bedrock surrounds) and rapidly moves you into them. This is essential for PvP survival, providing instant protection from crystal damage and other threats.
+
+**Description:** Moves and centers yourself into the nearest hole (or teleport with some settings)
+
+## Core Concept
+
+In Minecraft PvP, "holes" are 1x1 spaces surrounded by blast-resistant blocks (obsidian or bedrock). These provide protection from:
+- End crystal explosions
+- TNT damage
+- Most ranged attacks
+
+Holesnap automates the process of finding and moving into these safe positions during combat.
+
+## Key Features
+
+### Intelligent Hole Detection
+
+- Scans for holes within configurable range (1-6 blocks)
+- Supports both single holes and double holes
+- Distinguishes between obsidian and bedrock holes
+- Validates hole safety (checks for air blocks inside)
+
+**Location:** Holesnap.java:129
+
+### Visual Feedback
+
+Real-time visualization of snap movement:
+- Colored line from player to target hole
+- Customizable gradient colors (left/right)
+- Distance display in HUD
+- Clear indication of target position
+
+**Location:** Holesnap.java:360-369, 400-413
+
+### Movement Modes
+
+**Normal Mode:**
+- Direct pathfinding to hole center
+- Physics-based movement
+- Step height handling
+- Collision detection
+
+**Pathfinding Mode:**
+- Advanced pathfinding algorithm
+- Navigates around obstacles
+- Better for complex terrain
+
+**Location:** Holesnap.java:91-95, 306-336
+
+## Configuration
+
+### Basic Settings
+
+**Range**
+- Range to search for holes
+- Range: 1-6 blocks
+- Default: 3
+- Higher range = more options but slower detection
+
+**Mode**
+- Movement calculation mode
+- Options: Normal, Pathfinding
+- Default: Normal
+- Normal is faster, Pathfinding is smarter
+
+**Doubles**
+- Allow targeting 2x1 holes
+- Default: false
+- Useful for more hole options but less safe
+
+**Swapping**
+- Allow swapping to holes even if you're already in one
+- Default: false
+- Enable for repositioning between holes
+
+**Location:** Holesnap.java:40-95
+
+### Speed Optimization
+
+**Boost**
+- Use speed boost for faster hole snapping
+- Default: false
+- Faster but more detectable
+
+**Use TickSpeed**
+- Modify game tick rate during snap
+- Default: false
+- Dramatically increases speed
+
+**Tick Amount**
+- Tick speed multiplier when Use TickSpeed enabled
+- Range: 1-10
+- Default: 5
+- Higher = faster but more detectable
+
+**Boost Time**
+- Ticks to apply timer boost
+- Range: 10-100
+- Default: 25
+- Controls how long the speed boost lasts
+
+<Warning>
+Timer-based speed (Use TickSpeed) is highly detectable by anti-cheat systems. Use with caution on protected servers.
+</Warning>
+
+**Location:** Holesnap.java:49-70
+
+### Advanced Options
+
+**Physics**
+- Run multiple physics ticks on enable
+- Default: false
+- Simulates movement for instant positioning
+
+**Physics Ticks**
+- Number of physics ticks to run
+- Range: 3-20
+- Default: 3
+- More ticks = further instant movement
+
+**Use Post Timer**
+- Apply timer after reaching hole
+- Default: false
+- Helps with centering in hole
+
+<Tip>
+Physics mode with 3-5 ticks can provide near-instant hole positioning, but may trigger anti-cheat on strict servers.
+</Tip>
+
+**Location:** Holesnap.java:79-89
+
+### Step Configuration
+
+**Step Mode**
+- How to handle height differences
+- Options: Vanilla, NCP, NONE
+- Default: Vanilla
+
+**Modes explained:**
+- **Vanilla:** Uses standard step height increase
+- **NCP:** NoCheatPlus bypass technique
+- **NONE:** No step assistance (may fail on uneven terrain)
+
+**Location:** Holesnap.java:96-100, 196-203, 322-328
+
+### Visual Customization
+
+**Left Color**
+- Starting color of the visual line
+- Default: RGB(255, 0, 255, 255) - Magenta
+
+**Right Color**
+- Ending color of the visual line
+- Default: RGB(0, 255, 0) - Green
+
+The line renders as a gradient between these colors.
+
+**Location:** Holesnap.java:101-108, 366
+
+## Movement Mechanics
+
+### Target Calculation
+
+Holesnap calculates the target position differently for single vs. double holes:
+
+**Single Hole:**
+```
+targetPos = (hole.X + 0.5, player.Y, hole.Z + 0.5)
+```
+Centers you in the middle of the block.
+
+**Double Hole:**
+- If `toTarget` exists: centers on that specific block
+- Otherwise: calculates center point between both blocks
+```
+centerX = (pos1.X + 0.5 + pos2.X + 0.5) / 2
+centerZ = (pos1.Z + 0.5 + pos2.Z + 0.5) / 2
+```
+
+**Location:** Holesnap.java:286-303
+
+### Speed Calculation
+
+Movement speed is calculated based on:
+1. Distance to target
+2. Ground state (on ground vs airborne)
+3. Boost setting
+
+**On Ground:**
+- With Boost: `min(PlayerUtils.getDefaultBaseSpeed(true), dist/2)`
+- Without Boost: `min(0.2805, dist/2)`
+
+**In Air:**
+- Uses `PlayerUtils.getDefaultBaseSpeed(false)`
+
+**Location:** Holesnap.java:310-318
+
+### Direction Calculation
+
+Uses rotation to player position:
+```java
+double yawRad = Math.toRadians(getRotationTo(playerPos, targetPos).x);
+motionX = -Math.sin(yawRad) * speed;
+motionZ = Math.cos(yawRad) * speed;
+```
+
+**Location:** Holesnap.java:309, 320-321
+
+## Auto-Disable Conditions
+
+Holesnap automatically disables when:
+
+1. **No hole found on enable**
+   - Displays: "Unable to find hole. Disabling"
+
+2. **Successfully entered hole**
+   - Displays: "Snapped into hole, disabling."
+   - Centers player position
+
+3. **Target hole destroyed**
+   - Displays: "Hole no longer exists, disabling."
+   - Happens if blocks are broken during movement
+
+4. **Server disconnect**
+   - Prevents errors on world change
+
+**Location:** Holesnap.java:130-143, 223-256, 337-350, 354-357
+
+## Integration & Compatibility
+
+### NoAccel Integration
+
+Holesnap pauses NoAccel module during operation:
+- Sets `NoAccel.paused = true` during movement
+- Restores `NoAccel.paused = false` when complete
+- Prevents movement conflicts
+
+**Location:** Holesnap.java:132, 165, 216, 243, 281, 344
+
+### Step Integration
+
+Dynamic step height adjustment:
+- Sets step height when collision detected
+- Resets to 0.6 when clear path
+- Uses Step module's configured height
+
+**Location:** Holesnap.java:163, 326-328, 332
+
+### Timer Management
+
+Careful timer state management:
+- Stores original tick length on enable
+- Applies custom timer during movement
+- Restores original value on disable
+- Handles post-timer timing separately
+
+**Location:** Holesnap.java:109, 160-161, 194, 220, 236, 248, 262, 266, 342
+
+## Usage Guide
+
+### Basic Usage
+
+1. Bind Holesnap to a key (e.g., H)
+2. During combat, press the key when you need safety
+3. Module finds nearest hole and moves you there
+4. Automatically disables when safe
+
+### Competitive PvP Setup
+```
+Range: 3
+Mode: Normal
+Boost: true
+Use TickSpeed: false
+Doubles: false
+Swapping: false
+Physics: false
+Step Mode: Vanilla
+```
+Balanced setup for most PvP scenarios.
+
+### Aggressive Setup (Risky)
+```
+Range: 4
+Mode: Normal
+Boost: true
+Use TickSpeed: true
+Tick Amount: 5
+Boost Time: 25
+Doubles: true
+Swapping: true
+Physics: true
+Physics Ticks: 5
+Step Mode: NCP
+```
+Maximum speed hole snapping, very detectable.
+
+### Conservative Setup
+```
+Range: 2
+Mode: Pathfinding
+Boost: false
+Use TickSpeed: false
+Doubles: false
+Swapping: false
+Physics: false
+Step Mode: Vanilla
+```
+Safer for strict servers, slower but less detectable.
+
+## Advanced Techniques
+
+### Pre-Emptive Snapping
+
+Bind Holesnap to an easily accessible key and use it:
+- Before engaging in combat
+- When taking damage
+- When opponent pulls out crystals
+- When low on health
+
+### Hole Swapping
+
+With Swapping enabled:
+- Can reposition between holes during fight
+- Useful for avoiding trapped holes
+- Enables tactical repositioning
+- Keep Range low (2-3) for predictable swaps
+
+### Timer Control
+
+For maximum speed with minimal flags:
+- Enable Use TickSpeed
+- Set Tick Amount to 2-3 (not 5+)
+- Set Boost Time to 15-20
+- Disable immediately after reaching hole
+
+## Troubleshooting
+
+**"Unable to find hole" on enable**
+- Increase Range setting
+- Enable Doubles to consider 2x1 holes
+- Verify you're not already in a hole (enable Swapping if you are)
+- Check surrounding area has valid holes
+
+**Movement is slow**
+- Enable Boost option
+- Enable Use TickSpeed (if server allows)
+- Increase Tick Amount
+- Check if NoAccel is interfering
+
+**Getting stuck on blocks**
+- Change Step Mode to Vanilla or NCP
+- Enable Physics with 3-5 ticks
+- Increase Range to find clearer path
+- Try Pathfinding mode
+
+**Module doesn't disable after reaching hole**
+- May be stuck in "almost there" state
+- Manually disable and re-enable
+- Check Post Timer setting (try toggling)
+- Verify hole is still valid (not griefed)
+
+**Visual line not showing**
+- Check colors are not set to transparent
+- Ensure render distance is sufficient
+- Verify target hole is within range
+- Check if HUD is disabled
+
+## Technical Details
+
+### Hole Validation
+
+Uses `HoleUtils` to validate holes:
+- `isObbyHole()` - Checks for obsidian surround
+- `isBedrockHoles()` - Checks for bedrock surround
+- `isDoubleHoleFr()` - Validates double holes
+
+All checks ensure air blocks inside the hole.
+
+**Location:** Holesnap.java:230-231
+
+### State Tracking
+
+- `boostTime` - Tracks packets sent for timer duration
+- `stuckTicks` - Counts ticks stuck on collision
+- `posttimerticks` - Timer ticks after reaching hole
+- `startPos` - Original position when enabled
+- `lastTarget` - Current target position
+- `targetHole` - Current target hole data structure
+
+**Location:** Holesnap.java:110-115, 128, 171, 181, 237
+
+### Movement State
+
+The `cancel` flag indicates active movement:
+- `true` when moving to hole
+- `false` when disabled or idle
+- Other modules can check `Holesnap.INSTANCE.cancel`
+
+**Location:** Holesnap.java:30, 133, 283, 345
+
+## Best Practices
+
+<Tip>
+Practice using Holesnap in safe environments first. Understanding the Range and Mode settings is crucial for effective combat use.
+</Tip>
+
+<Tip>
+Keep Range at 3-4 blocks. Higher ranges can target holes too far away, making movement obvious and detectable.
+</Tip>
+
+<Warning>
+Holesnap is most effective as a panic button, not a constant tool. Overuse makes your movement predictable to opponents.
+</Warning>
+
+<Warning>
+Always verify the hole is safe before Holesnap activates. The module checks structure but not for placed crystals or traps.
+</Warning>
+
+## Why It's a Signature Feature
+
+Holesnap represents sophisticated game knowledge:
+- Understanding PvP hole meta
+- Real-time pathfinding and movement
+- Visual feedback and user experience
+- Integration with multiple client systems
+- Balancing speed with anti-cheat evasion
+
+This level of polish and functionality makes it a standout feature of the Sn0w client.

@@ -1,0 +1,180 @@
+---
+title: Nametags
+description: Enhanced player nametags with customizable information and item display
+---
+
+Nametags replaces the vanilla player name display with highly customizable tags showing detailed player information, equipment, and status.
+
+## Configuration Pages
+
+Nametags settings are organized into two pages:
+
+### Colors Page
+
+Customize nametag appearance and borders:
+
+- **Border Color** - Outline color for the nametag background
+- **Safe Border** - Use custom color when player is in a safe hole
+- **Safe Color** - Border color for players in holes
+- **Back Color** - Background color (default: dark gray)
+- **Normal Color** - Text color for regular players
+- **Friends Color** - Text color for friends
+- **Friend Border** - Apply friend color to border
+- **Sneaking Color** - Text color when player is sneaking
+- **Pop Colors A/B/C** - Gradient colors for totem pop count (1-5-10+ pops)
+
+### Items Page
+
+Configure displayed information:
+
+- **Ping** - Show player latency with color coding
+- **Health** - Display health and absorption hearts
+- **Tab Health** - Use scoreboard health instead of client-side
+- **Items** - Render player's armor and held items
+- **Durability** - Show item durability percentage
+- **Pops** - Display totem pop count
+- **Dash Pops** - Add dash before pop count
+- **Item Name** - Show held item name
+- **Enchant Name** - Display enchantments on items
+- **Short Enchants** - Only show important enchantments
+- **Rainbow 32ks** - Rainbow effect for 32k weapons
+- **Cursed** - Red color for curse enchantments
+- **Entity ID** - Show player's entity ID
+- **Gamemode** - Display gamemode indicator ([C]/[S]/[I])
+- **Range** - Render distance (0-300 blocks)
+
+## Information Display
+
+### Ping Color Coding
+
+When `Colored Ping` is enabled:
+
+```java
+ping <= 40  -> GREEN
+ping <= 70  -> DARK_GREEN  
+ping <= 99  -> YELLOW
+ping > 99   -> RED
+```
+
+Source: `Nametags.java:383-405`
+
+### Pop Color Gradient
+
+Totem pops use color interpolation:
+
+```java
+// 1-5 pops: interpolate between Color A and B
+// 5-10+ pops: interpolate between Color B and C
+ColorUtil.interpolate(progress, colorB, colorA)
+```
+
+Source: `Nametags.java:407-419`
+
+## Item Rendering
+
+Nametags renders player equipment above the name:
+
+### Item Order (left to right)
+1. Offhand item
+2. Armor (boots → helmet)
+3. Main hand item
+
+### Enchantment Display
+
+Important enchantments that show with `Short Enchants`:
+
+- Protection
+- Sharpness
+- Mending
+- Blast Protection
+- Feather Falling
+- Unbreaking
+- Knockback
+- Efficiency
+- Channeling
+- Power
+- Silk Touch
+- Thorns
+
+Source: `Nametags.java:238`
+
+### Special Items
+
+- **Enchanted Golden Apple** - Displays as "God" in red
+- **32k Weapons** - Rainbow text effect when level > 42
+- **Cursed Items** - Dark red color for Vanishing/Binding
+
+<Info>
+Enchantment names are truncated to 2 characters (e.g., "Pr4" for Protection 4) to save space.
+</Info>
+
+## Scaling System
+
+Nametags use distance-based scaling for readability:
+
+```java
+// Far scaling (> 8 blocks)
+scaling = 0.0018f + (scalingSet * 0.01f) * distance
+
+// Close scaling (<= 8 blocks)  
+scaling = closeScaling // default: 0.0245
+```
+
+Source: `Nametags.java:282-286`
+
+**Scaling Settings:**
+- **Scaling** - Far distance multiplier (0.1-0.5)
+- **Close Scaling** - Fixed scale for nearby players (0.0200-0.0300)
+
+## Visual Customization
+
+### Durability Display
+
+Item durability uses color coding:
+
+```java
+// HSL color: 120° (green) at full durability -> 0° (red) at 0%
+ColorUtil.hslToColor(
+  (maxDamage - damage) / maxDamage * 120.0f,
+  100.0f, // saturation
+  50.0f,  // lightness  
+  1.0f    // alpha
+)
+```
+
+Source: `Nametags.java:574`
+
+### Border Colors
+
+Border priority (highest to lowest):
+1. Friend border (if enabled and player is friend)
+2. Safe border (if enabled and player in hole)
+3. Default border color
+
+Source: `Nametags.java:435`
+
+## Rendering Details
+
+<Info>
+Nametags use OpenGL depth function `GL_ALWAYS` to render through walls, making them visible at all times.
+</Info>
+
+The module renders in multiple passes:
+1. Background rectangle
+2. Colored border outline
+3. Text sections with individual colors
+4. Item models and enchantment text
+5. Durability bars and stack counts
+
+Source: `Nametags.java:296-305`
+
+## Compatibility
+
+Nametags integrates with:
+- **Freecam** - Shows your own nametag when in freecam mode
+- **FriendManager** - Custom colors for friends
+- **PopManager** - Tracks totem pops across deaths
+- **HoleUtils** - Detects safe holes for border coloring
+- **FontModule** - Custom font rendering support
+
+Source: `Nametags.java:1-677`

@@ -1,0 +1,176 @@
+---
+title: Config Command
+description: Load, save, and manage client configurations
+---
+
+The `config` command provides comprehensive configuration management, allowing you to save, load, delete, and organize your Sn0w client settings.
+
+## Syntax
+
+```
+.config <action> [name]
+```
+
+<ParamField path="action" type="string" required>
+  The action to perform: `save`, `load`, `softload`, `delete`/`del`, `list`, or `folder`/`open`.
+</ParamField>
+
+<ParamField path="name" type="string">
+  The name of the configuration file (required for save, load, softload, and delete actions). Do not include the `.yml` extension.
+</ParamField>
+
+## Actions
+
+### Save Configuration
+
+Save your current client settings to a configuration file:
+
+```
+.config save <name>
+```
+
+This creates a `.yml` file in your config folder with all current module states, binds, and settings.
+
+**Example:**
+```
+.config save pvp
+.config save crystal
+.config save default
+```
+
+### Load Configuration
+
+Load a previously saved configuration:
+
+```
+.config load <name>
+```
+
+This replaces your current settings with those from the specified configuration file.
+
+**Example:**
+```
+.config load pvp
+.config load crystal
+```
+
+### Soft Load Configuration
+
+Soft load a configuration (loads settings without fully replacing current configuration):
+
+```
+.config softload <name>
+```
+
+This merges settings from the configuration file with your current settings, useful for preserving certain configurations while updating others.
+
+**Example:**
+```
+.config softload pvp
+```
+
+### Delete Configuration
+
+Delete a saved configuration file:
+
+```
+.config delete <name>
+.config del <name>
+```
+
+Both `delete` and `del` work as aliases for this action.
+
+**Example:**
+```
+.config delete oldconfig
+.config del test
+```
+
+### List Configurations
+
+Display all available configuration files:
+
+```
+.config list
+```
+
+This shows all `.yml` configuration files in your config folder.
+
+### Open Config Folder
+
+Open the configuration folder in your system file explorer:
+
+```
+.config folder
+.config open
+```
+
+Both `folder` and `open` work as aliases for this action.
+
+## Examples
+
+### Basic Workflow
+
+Save your current PvP setup:
+```
+.config save pvp-setup
+```
+
+List all configs to verify it was saved:
+```
+.config list
+```
+
+Load a different config:
+```
+.config load mining
+```
+
+Switch back to PvP config:
+```
+.config load pvp-setup
+```
+
+### Managing Multiple Configs
+
+Create configs for different scenarios:
+```
+.config save pvp
+.config save mining
+.config save building
+.config save traveling
+```
+
+Delete an old config you no longer need:
+```
+.config del old-pvp
+```
+
+## File Format
+
+Configurations are saved as YAML (`.yml`) files in the client's config directory. You can manually edit these files if needed by opening the config folder:
+
+```
+.config folder
+```
+
+## Usage Notes
+
+- Configuration names are case-sensitive
+- Do not include the `.yml` extension when specifying config names - it's added automatically
+- If a save operation fails, you'll receive a red error message
+- If a load operation fails (e.g., file not found), you'll receive an error message
+- Successfully completed operations will display a blue confirmation message
+- Soft loading is useful when you want to update specific settings without completely overwriting your current configuration
+
+## Error Messages
+
+The config command provides feedback for all operations:
+
+- **Success (Blue)**: "Successfully saved config \<name\>.yml!"
+- **Error (Red)**: "Failed to save config \<name\>.yml!"
+- **Bad Usage (Red)**: "Bad usage! config \<save/del/load/softload/list/folder\> \<name\>"
+
+## Related Commands
+
+- **folder** - Open the configuration folder (standalone command)

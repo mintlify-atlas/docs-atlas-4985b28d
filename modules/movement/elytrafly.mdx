@@ -1,0 +1,330 @@
+---
+title: ElytraFly
+description: Advanced elytra flight with multiple control modes and acceleration
+---
+
+## Overview
+
+ElytraFly provides advanced control over elytra flight mechanics with multiple modes designed for different purposes - from creative-style flight to high-speed travel and combat maneuvering.
+
+**Description:** I just flew 300 blocks (like a butterfly this time) thanks to sn0wgod.cc
+
+## Flight Modes
+
+### Creative
+
+Creative-style elytra flight with independent horizontal and vertical control.
+
+**Features:**
+- Requires active elytra flight (won't auto-activate)
+- Jump key for ascent, Sneak key for descent
+- Customizable speed values
+- Zero vertical motion when no input
+
+**Settings:**
+- `Horizontal` - Forward/backward speed (range: 1-5, default: 3)
+- `Vertical` - Up/down speed (range: 1-5, default: 3)
+
+**Best for:** Precise building, exploration, casual flight
+
+**Location:** ElytraFly.java:186-208
+
+### Bounce
+
+Auto-activating elytra flight with ground-bounce mechanics.
+
+**Features:**
+- Automatically activates elytra when airborne
+- Auto-jumps when touching ground
+- Optional pitch control (85° upward)
+- Boost acceleration support
+- Ground boost for maintaining highway speeds
+
+**Settings:**
+- `Pitch` - Lock pitch to 85° (default: false)
+- `Accel` - Enable boost acceleration (default: true)
+- `OnGround` - Special ground boost logic (default: true)
+
+**Best for:** Long-distance highway travel, maintaining high speeds
+
+<Tip>
+Bounce mode is excellent for highway travel as it automatically handles the bounce timing and keeps you airborne.
+</Tip>
+
+**Location:** ElytraFly.java:209-234, 432-468
+
+### Control
+
+Manual control mode with precise pitch and yaw handling.
+
+**Features:**
+- Full pitch control based on keys:
+  - Jump only: -50° (or -90° stationary) when boosted, -50° normal
+  - Sneak only: +50° (or +90° stationary) when boosted, +50° normal
+  - No input: 0.1° (maintains altitude)
+- Automatic yaw alignment to movement direction
+- Boost acceleration support
+- Cancels movement when stationary
+
+**Settings:**
+- `Accel` - Enable boost acceleration (default: true)
+
+**Best for:** Combat, precise navigation, aerial PvP
+
+**Location:** ElytraFly.java:162-167, 235-241, 361-402, 437-444
+
+### Accel
+
+Simple acceleration-focused mode.
+
+**Features:**
+- Only activates during elytra flight
+- Applies constant boost acceleration
+- No automatic elytra activation
+
+**Best for:** Augmenting manual elytra flight with extra speed
+
+**Location:** ElytraFly.java:242-247
+
+### Factor
+
+Advanced mode with customizable speed multipliers and anti-cheat bypasses.
+
+**Features:**
+- Automatic elytra activation
+- Customizable horizontal speed factor
+- Independent up/down factors
+- Multiple strict modes for anti-cheat bypass
+- Infinite durability option
+- Acceleration system
+- Anti-kick when stationary
+
+**Settings:**
+- `Factor` - Horizontal speed multiplier (range: 0.1-50.0, default: 1.5)
+- `Up Factor` - Upward speed multiplier (range: 0-10.0, default: 1.0)
+- `Down Factor` - Downward speed multiplier (range: 0-10.0, default: 1.0)
+- `Inf Dura` - Prevent elytra durability loss (default: true)
+- `Accelerate` - Gradually increase to target speed (default: true)
+- `Anti Kick` - Circular motion when stationary (default: true)
+- `Strict` - Anti-cheat bypass mode (default: None)
+
+**Strict Modes:**
+- **None** - Zero vertical motion, pure horizontal speed
+- **Normal** - Periodic descent every 32 ticks, rise on specific ticks
+- **NCP** - Not documented in source (appears unused)
+- **Glide** - Minimal descent (-0.00001)
+
+**Best for:** Maximum speed travel, long-distance flight, server bypassing
+
+<Warning>
+Factor mode with high multipliers is very detectable. Start with low values (1.5-3.0) and increase gradually.
+</Warning>
+
+**Location:** ElytraFly.java:248-310
+
+## Advanced Features
+
+### Boost System
+
+The boost system adds GRIM_AIR_FRICTION acceleration to movement:
+
+```java
+final double GRIM_AIR_FRICTION = 0.0264444413;
+```
+
+Calculates X/Z motion based on yaw:
+- Uses `RotationUtils.getActualYaw()` for accurate direction
+- Adds friction-based acceleration to existing velocity
+- Applied in Bounce, Control, and Accel modes
+
+**Location:** ElytraFly.java:132, 477-484
+
+### Highway Dodge
+
+Automatic obstacle avoidance for highway travel:
+- Detects horizontal collisions
+- Triggers Baritone's obstacle pass
+- Only active when Baritone is installed and not paused
+
+**Setting:** `Highway` - Enable obstacle dodge (default: false)
+
+**Location:** ElytraFly.java:124, 147-149, 518-525
+
+<Tip>
+Highway Dodge requires Baritone to be installed. It's perfect for AFK travel on nether highways.
+</Tip>
+
+### Acceleration System
+
+Factor mode includes a sophisticated acceleration system:
+
+1. **Collision Reset:** `rSpeed` flag resets speed to 1.0 on collision
+2. **Gradual Acceleration:** Increases by 0.1 per tick until reaching target
+3. **Deceleration:** Decreases by 0.1 if factor is reduced
+4. **Rubberband Protection:** Resets on server position correction packets
+
+**Location:** ElytraFly.java:255-275, 325-329
+
+### Anti-Kick System
+
+When stationary in Factor mode:
+- Applies circular motion pattern
+- Uses sin/cos of player age for smooth circle
+- Radius: 0.03 blocks
+- Formula: `sin(age % 360) * 0.03`, `cos(age % 360) * 0.03`
+
+**Location:** ElytraFly.java:304-308
+
+### Infinite Durability
+
+When enabled, prevents elytra from taking damage:
+- Intercepts durability loss packets
+- Only applies when in Factor mode with `Inf Dura` enabled
+- Check with `ElytraFly.isPacketFlying()`
+
+**Location:** ElytraFly.java:78-83, 356-359
+
+## Control Pitch Calculator
+
+The `getControlPitch()` method provides intelligent pitch control:
+
+**When Firework Boosted:**
+- Jump + Moving: -50°
+- Jump + Stationary: -90°
+- Sneak + Moving: +50°
+- Sneak + Stationary: +90°
+- No input: 0°
+
+**Normal Flight:**
+- Jump: -50°
+- Sneak: +50°
+- No input: 0.1° (slight rise)
+
+**Location:** ElytraFly.java:361-402
+
+## Configuration Examples
+
+### Highway Travel
+```
+Mode: Bounce
+Pitch: true
+Accel: true
+OnGround: true
+Highway: true (if Baritone installed)
+```
+Optimal for AFK nether highway travel with obstacle avoidance.
+
+### Combat Flight
+```
+Mode: Control
+Accel: true
+```
+Precise control for aerial PvP with boost acceleration.
+
+### Speed Travel
+```
+Mode: Factor
+Factor: 3.0
+Up Factor: 2.0
+Down Factor: 2.0
+Accelerate: true
+Strict: Glide
+Inf Dura: true
+Anti Kick: true
+```
+Fast long-distance travel with anti-cheat bypass.
+
+### Conservative Server
+```
+Mode: Factor
+Factor: 1.5
+Up Factor: 1.0
+Down Factor: 1.0
+Accelerate: true
+Strict: Normal
+Inf Dura: false
+Anti Kick: true
+```
+Safer settings for strict servers.
+
+## Usage Tips
+
+<Tip>
+Bounce mode with Pitch enabled is the easiest mode to use - just hold W and let the module handle everything.
+</Tip>
+
+<Tip>
+Control mode's pitch calculation makes it excellent for combat. The stationary -90° pitch lets you gain altitude quickly when needed.
+</Tip>
+
+<Warning>
+Factor mode at high speeds (>5.0) is extremely detectable. Use conservative values or expect flags.
+</Warning>
+
+<Warning>
+The module automatically pauses when LongJump is active in Grim mode to prevent conflicts.
+</Warning>
+
+<Warning>
+Elytra is required in your chest armor slot. The module will not work without it.
+</Warning>
+
+## Baritone Integration
+
+### Auto-Pause
+
+The module respects Baritone's state:
+- Checks `KamiMod.isBaritonePaused()`
+- Disables all ElytraFly functions when Baritone is paused
+- Returns control when Baritone resumes
+
+**Location:** ElytraFly.java:150, 177, 320, 424
+
+### Obstacle Passing
+
+When Highway Dodge is enabled:
+- Monitors `mc.player.horizontalCollision`
+- Triggers `Baritone.INSTANCE.doObstaclePass()`
+- Baritone takes temporary control to navigate around obstacles
+- Returns control after passing
+
+**Location:** ElytraFly.java:518-525
+
+## Compatibility
+
+**Works with:**
+- Flight module (Grim mode integration)
+- Baritone (obstacle avoidance)
+- MiddleClick (firework integration)
+- LongJump (auto-pauses)
+
+**Conflicts with:**
+- Other elytra modification modules
+- Custom movement modules may cause issues
+
+## Troubleshooting
+
+**Elytra not activating (Bounce/Control/Factor)**
+- Ensure elytra is equipped in chest slot
+- Check elytra has durability remaining
+- Jump into the air before enabling
+
+**Speed resets constantly**
+- Server is sending position corrections
+- Reduce Factor value
+- Enable Strict mode (Normal or Glide)
+
+**Getting kicked for invalid movement**
+- Enable appropriate Strict mode
+- Reduce factor multipliers
+- Enable Anti Kick in Factor mode
+
+**Highway Dodge not working**
+- Verify Baritone is installed and available
+- Ensure Highway setting is enabled
+- Check Baritone is not paused
+
+**Control mode not responding**
+- Verify you're actively holding movement keys
+- Check that elytra flight is active
+- Try disabling and re-enabling the module

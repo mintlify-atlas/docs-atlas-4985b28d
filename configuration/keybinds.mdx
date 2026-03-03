@@ -1,0 +1,340 @@
+---
+title: Keybind System
+description: How to bind modules to keyboard and mouse buttons in Sn0w
+---
+
+## Overview
+
+Sn0w's keybind system allows you to bind modules to keyboard keys and mouse buttons for quick toggling. Keybinds are managed through the ClickGUI and stored in configuration files.
+
+## Keybind Architecture
+
+The keybind system consists of several components:
+
+### Bind Class
+
+Each module has a `Bind` object that stores:
+- **key**: Integer key code (GLFW key code)
+- **isMouse**: Boolean flag indicating if it's a mouse button
+
+```java
+public class Bind {
+    int key;           // Default: -1 (unbound)
+    boolean isMouse;   // Default: false
+}
+```
+
+### Module Integration
+
+All modules implement the `IBindable` interface:
+
+```java:Module.java
+public class Module extends Feature implements IBindable {
+    Bind bind;
+    
+    public Module(String name, Category category) {
+        this.bind = new Bind();
+        BindManager.INSTANCE.getBindables().add(this);
+    }
+    
+    @Override
+    public void onKey() {
+        if (!bind.getIsMouse())
+            this.toggle();
+    }
+}
+```
+
+## Binding Keys in ClickGUI
+
+### Keyboard Keys
+
+1. Open ClickGUI (default: Right Shift)
+2. Navigate to the module you want to bind
+3. Click on the bind button/field
+4. Press the desired keyboard key
+5. The keybind is immediately saved
+
+### Mouse Buttons
+
+<Note>
+Mouse button binds cannot be set through the GUI. They must be configured in the config file.
+</Note>
+
+To bind a mouse button, you need to edit the configuration file manually. See [Mouse Button Binds](#mouse-button-binds) below.
+
+## Unbinding Modules
+
+To remove a keybind:
+
+1. Navigate to the module in ClickGUI
+2. **Right-click** the bind button
+3. The bind is cleared (set to `-1`)
+
+<Info>
+Right-clicking is the standard way to unbind modules in Sn0w.
+</Info>
+
+## Mouse Button Binds
+
+Mouse buttons must be configured directly in config files using the `MOUSE_` prefix.
+
+### Format
+
+```yaml
+ModuleName:
+  bind: MOUSE_<button_number>
+```
+
+### Mouse Button Numbers
+
+| Button | Code | Description |
+|--------|------|-------------|
+| Left Click | `MOUSE_0` | Primary mouse button |
+| Right Click | `MOUSE_1` | Secondary mouse button |
+| Middle Click | `MOUSE_2` | Mouse wheel button |
+| Side Button 1 | `MOUSE_3` | Mouse side button (back) |
+| Side Button 2 | `MOUSE_4` | Mouse side button (forward) |
+
+### Example Configuration
+
+```yaml
+AutoTrap:
+  bind: MOUSE_4
+  enabled: false
+  # ... other settings
+
+AutoFeetPlace:
+  bind: MOUSE_3
+  enabled: false
+  # ... other settings
+```
+
+<Warning>
+Do not bind essential functions (left/right click) as this may interfere with normal gameplay.
+</Warning>
+
+### How to Set Mouse Binds
+
+1. Close Minecraft
+2. Open your config file in `Minecraft/Sn0w/configs/`
+3. Find the module you want to bind
+4. Change the `bind` value to `MOUSE_X` (replace X with button number)
+5. Save the file
+6. Launch Minecraft
+7. Load the config with `.config load <name>`
+
+**Example from FAQ.md**:
+> You do it in your config.yml, i.e., `MOUSE_4`  
+> See [Module.java:226](https://github.com/Skitttyy/Sn0w/blob/main/src/main/java/me/skitttyy/kami/api/feature/module/Module.java#L226)
+
+## Keybind Storage Format
+
+### In Memory
+
+- **Keyboard keys**: Stored as integer GLFW key codes
+- **Mouse buttons**: Stored as integers with `isMouse = true`
+
+### In Config Files
+
+#### Keyboard Keys
+```yaml
+ModuleName:
+  bind: 78  # N key (GLFW code)
+```
+
+#### Mouse Buttons
+```yaml
+ModuleName:
+  bind: MOUSE_4  # Side button
+```
+
+### Serialization Code
+
+From `Module.java`, the save/load process:
+
+```java:Module.java
+@Override
+public Map<String, Object> save() {
+    Map<String, Object> toSave = super.save();
+    if (bind.getIsMouse()) {
+        toSave.put("bind", "MOUSE_" + bind.getKey());
+    } else {
+        toSave.put("bind", bind.getKey());
+    }
+    return toSave;
+}
+
+@Override
+public void load(Map<String, Object> objects) {
+    super.load(objects);
+    
+    if (objects.get("bind").toString().contains("MOUSE_")) {
+        bind.setIsMouse(true);
+        String bindString = objects.get("bind").toString();
+        bind.setKey(Integer.parseInt(bindString.replace("MOUSE_", "")));
+    } else {
+        bind.setKey((int) objects.get("bind"));
+    }
+}
+```
+
+## Bind Manager
+
+The `BindManager` handles all keybind events:
+
+### Keyboard Events
+
+```java:BindManager.java
+@SubscribeEvent
+public void onKey(KeyboardEvent event) {
+    if (mc.currentScreen == null)
+        for (IBindable bindable : getBindables()) {
+            if (bindable.getKey() == event.getKey() 
+                && event.getAction() == GLFW.GLFW_PRESS) {
+                bindable.onKey();
+            }
+        }
+}
+```
+
+- Only triggers when no GUI is open
+- Checks for `GLFW_PRESS` action (key down)
+- Calls `onKey()` on matching module
+
+### Mouse Events
+
+```java:BindManager.java
+@SubscribeEvent
+public void onKey(MouseEvent event) {
+    if (!event.getType().equals(MouseEvent.Type.CLICK)) return;
+    
+    for (Feature feature : FeatureManager.INSTANCE.getFeatures()) {
+        if (feature instanceof Module) {
+            Module module = (Module) feature;
+            if (module.getBind().getIsMouse()) {
+                if (module.getBind().getKey() == event.getButton()) {
+                    module.toggle();
+                }
+            }
+        }
+    }
+}
+```
+
+- Only processes `CLICK` type events
+- Iterates through all modules
+- Toggles module if mouse button matches
+
+## Common Key Codes
+
+GLFW key codes for common keys:
+
+| Key | Code | Key | Code |
+|-----|------|-----|------|
+| A-Z | 65-90 | 0-9 | 48-57 |
+| F1-F12 | 290-301 | Space | 32 |
+| Enter | 257 | Shift | 340 |
+| Ctrl | 341 | Alt | 342 |
+| Tab | 258 | Caps Lock | 280 |
+
+### Example Binds from Config
+
+```yaml
+# From basicconfig.yml
+AutoTrap:
+  bind: 78  # N key
+  
+Scaffold:
+  bind: 82  # R key
+  
+CatAura:
+  bind: 88  # X key
+  
+AutoArmor:
+  bind: 84  # T key
+  
+TickBase:
+  bind: 69  # E key
+```
+
+## Bind Priority
+
+### Keyboard Binds
+- Only trigger when no GUI screen is open
+- Checked every frame on key press
+- Multiple modules can share the same bind (all will toggle)
+
+### Mouse Binds
+- Always active (even with GUI open)
+- Processed on mouse click events
+- Can interfere with GUI interactions if using common buttons
+
+<Warning>
+Be careful binding mouse buttons that are used for GUI interactions (left/right click), as they will toggle the module even when clicking GUI elements.
+</Warning>
+
+## Best Practices
+
+### Choosing Keybinds
+
+1. **Accessibility**: Use keys near WASD for frequently used modules
+2. **Avoid conflicts**: Don't bind to keys used for movement or vanilla functions
+3. **Categorize**: Group related modules on nearby keys
+4. **Mouse buttons**: Reserve for toggle-intensive modules (AutoCrystal, etc.)
+
+### Recommended Binds
+
+**Combat Modules**:
+- AutoCrystal: `X`, `C`, or `MOUSE_4`
+- KillAura: `R` or `MOUSE_3`
+- AutoTrap: `N` or `Y`
+
+**Movement Modules**:
+- Scaffold: `V` or `G`
+- Flight: `F` or `H`
+- Speed: `B`
+
+**Utility Modules**:
+- FreeCam: `F4`
+- HudEditor: `F5`
+
+## Troubleshooting
+
+### Bind Not Working
+
+**Check**:
+1. Verify the module is not disabled
+2. Ensure no GUI is open (for keyboard binds)
+3. Check if another program is intercepting the key
+4. Verify the bind code is correct in config file
+
+### Mouse Bind Not Triggering
+
+**Solutions**:
+1. Verify `MOUSE_` prefix is in the config file
+2. Check the button number matches your mouse
+3. Ensure the config was loaded after editing
+4. Restart the client if hotloading fails
+
+### Multiple Modules Toggle Together
+
+**Cause**: Multiple modules share the same keybind
+
+**Solution**: 
+1. Check your config for duplicate binds
+2. Unbind unwanted modules (right-click in GUI)
+3. Assign unique keys to each module
+
+### Bind Resets After Restart
+
+**Solutions**:
+1. Save your config: `.config save <name>`
+2. Ensure the client shuts down properly (don't force close)
+3. Check file permissions on the Sn0w folder
+
+## See Also
+
+- [Configuration Overview](/configuration/overview) - Config system basics
+- [Config Files](/configuration/config-files) - File format details
+- [FAQ](/faq) - Common questions about binds

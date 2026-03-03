@@ -1,0 +1,157 @@
+---
+title: Installation
+description: Step-by-step guide to installing Sn0w for Minecraft 1.21.x
+---
+
+## Prerequisites
+
+Before installing Sn0w, ensure you have the following:
+
+- Minecraft Java Edition 1.21.x
+- Fabric Mod Loader installed
+- Java Development Kit (JDK) for building from source
+- An IDE (IntelliJ IDEA, Eclipse, or VS Code recommended)
+
+<Warning>
+  Sn0w is a hacked client intended for anarchy servers. Using this client on servers where it's prohibited may result in a ban. Use at your own risk.
+</Warning>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="From Source (Recommended)">
+    <Steps>
+      <Step title="Clone the Repository">
+        Clone the Sn0w repository to your local machine:
+        
+        ```bash
+        git clone https://github.com/Skitttyy/Sn0w.git
+        cd Sn0w
+        ```
+      </Step>
+      
+      <Step title="Set Up Your Development Environment">
+        Follow the [Fabric Wiki setup guide](https://fabricmc.net/wiki/tutorial:setup) for your specific IDE:
+        
+        - [IntelliJ IDEA](https://fabricmc.net/wiki/tutorial:setup#intellij_idea)
+        - [Eclipse](https://fabricmc.net/wiki/tutorial:setup#eclipse)
+        - [Visual Studio Code](https://fabricmc.net/wiki/tutorial:setup#visual_studio_code)
+        
+        <Note>
+          The setup process varies depending on your IDE. Make sure to follow the official Fabric documentation for your specific environment.
+        </Note>
+      </Step>
+      
+      <Step title="Import the Project">
+        Import the Sn0w project into your IDE:
+        
+        **For IntelliJ IDEA:**
+        - Open IntelliJ IDEA
+        - Select "Open" and navigate to the Sn0w directory
+        - Wait for Gradle to sync and download dependencies
+        
+        **For Eclipse:**
+        - Open Eclipse
+        - Select "Import" > "Gradle" > "Existing Gradle Project"
+        - Navigate to the Sn0w directory and import
+      </Step>
+      
+      <Step title="Build the Project">
+        Build the client using Gradle:
+        
+        ```bash
+        ./gradlew build
+        ```
+        
+        The compiled JAR file will be located in `build/libs/`
+      </Step>
+      
+      <Step title="Install to Minecraft">
+        Copy the built JAR file to your Minecraft mods folder:
+        
+        ```bash
+        # Windows
+        copy build\libs\Sn0w-*.jar %appdata%\.minecraft\mods\
+        
+        # macOS/Linux
+        cp build/libs/Sn0w-*.jar ~/.minecraft/mods/
+        ```
+      </Step>
+      
+      <Step title="Launch Minecraft">
+        Launch Minecraft with the Fabric profile. Sn0w should load automatically with your other mods.
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Pre-built Release">
+    <Steps>
+      <Step title="Download the Release">
+        Download the latest release JAR from the [GitHub releases page](https://github.com/Skitttyy/Sn0w/releases).
+      </Step>
+      
+      <Step title="Install Fabric Loader">
+        If you haven't already, install Fabric Loader for Minecraft 1.21.x from [fabricmc.net](https://fabricmc.net/use/).
+      </Step>
+      
+      <Step title="Add to Mods Folder">
+        Place the downloaded JAR file in your Minecraft mods folder:
+        
+        - **Windows:** `%appdata%\.minecraft\mods`
+        - **macOS:** `~/Library/Application Support/minecraft/mods`
+        - **Linux:** `~/.minecraft/mods`
+      </Step>
+      
+      <Step title="Launch Minecraft">
+        Launch Minecraft with the Fabric profile. Sn0w should load automatically.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Verify Installation
+
+To verify that Sn0w is installed correctly:
+
+1. Launch Minecraft with the Fabric profile
+2. Look for the Sn0w interface in-game
+3. Press the default menu key (usually Right Shift) to open the client GUI
+4. Check the console/logs for any error messages
+
+<Note>
+  If you encounter issues during installation, check the [FAQ](/faq) or create an issue on the [GitHub repository](https://github.com/Skitttyy/Sn0w/issues).
+</Note>
+
+## Troubleshooting
+
+### Common Issues
+
+**Client doesn't load:**
+- Ensure you're using Minecraft 1.21.x
+- Verify Fabric Loader is installed correctly
+- Check that the JAR file is in the correct mods folder
+
+**Build errors:**
+- Make sure you have the correct JDK version installed
+- Try running `./gradlew clean build`
+- Check that all Gradle dependencies downloaded correctly
+
+**Crashes on startup:**
+- Check for mod conflicts with other installed mods
+- Review the crash log in `.minecraft/crash-reports/`
+- Ensure you have enough RAM allocated to Minecraft
+
+<Warning>
+  Sn0w is a complex client with many features. You WILL encounter crashes and bugs. This is expected behavior for a client that was never meant for public release.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Learn the basics of using Sn0w
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Configure Sn0w for your playstyle
+  </Card>
+</CardGroup>
